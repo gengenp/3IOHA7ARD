@@ -731,8 +731,10 @@ a:focus-visible, button:focus-visible{
 /* ==========================================================================
    設定: 差し替え用URL
    ========================================================================== */
-// ランキングCSVのURL（列: timestamp,name,score）
-const RANKING_CSV_URL = "ここにランキングCSVのURLを入力"; // 例: Googleスプレッドシートの「ウェブに公開」CSVリンク
+// ランキングデータ（Googleスプレッドシート gviz JSON エンドポイント）
+// 仲間のMac側システムが「撃つたびに1行追記」する形式のシートに対応。
+// シート列: name(グループ名), stage(UNO1/UNO2/ESP32), score(今回の加点), total(累計), time(タイムスタンプ)
+const RANKING_JSON_URL = "https://docs.google.com/spreadsheets/d/1XoOn6FrQ1KaUa8O8whfINrN9HUtUpMBys82kcBoJe6Y/gviz/tq?tqx=out:json";
 
 // 待ち時間CSVのURL（列: timestamp,waiting_time,status）
 const WAITING_CSV_URL = "ここに待ち時間CSVのURLを入力";
@@ -740,8 +742,13 @@ const WAITING_CSV_URL = "ここに待ち時間CSVのURLを入力";
 // 校内マップ画像のURL（差し替え用）
 const MAP_IMAGE_URL = "https://placehold.co/640x420/0b0908/8a7f72?text=SCHOOL+MAP+%28DUMMY%29";
 
+// ランキング自動更新の間隔（ミリ秒）。撃つたびに追記されるログなので短めに設定。
+// 0.5秒だとGoogle側の制限に引っかかりやすいため、3秒を推奨値としています。
+const RANKING_POLL_INTERVAL_MS = 3000;
+
 /* ==========================================================================
    簡易CSVパーサー（カンマ区切り・ダブルクォート対応の簡易版）
+   ※ 待ち時間データ（別シート）はCSV形式のまま運用する想定なので残しています。
    ========================================================================== */
 function parseCSV(text){
   const lines = text.trim().split(/\r?\n/).filter(l => l.trim().length > 0);
@@ -843,19 +850,48 @@ function escapeHTML(str){
   }[c]));
 }
 
+/* ==========================================================================
+   ランキング取得: gviz JSON（撃つたびに1行追記されるログ形式）
+   グループ名(name)ごとに「最新の累計スコア(total)」を拾って集計し、
+   それを既存の renderRanking({name, score}) にそのまま渡す。
+   ========================================================================== */
 async function loadRanking(){
   try{
-    if(!RANKING_CSV_URL || RANKING_CSV_URL.startsWith("ここに")){
-      throw new Error("RANKING_CSV_URL が未設定です");
+    if(!RANKING_JSON_URL || RANKING_JSON_URL.startsWith("ここに")){
+      throw new Error("RANKING_JSON_URL が未設定です");
     }
-    const res = await fetch(RANKING_CSV_URL);
-    if(!res.ok) throw new Error("CSV取得に失敗: " + res.status);
+    const res = await fetch(RANKING_JSON_URL);
+    if(!res.ok) throw new Error("シート取得に失敗: " + res.status);
     const text = await res.text();
-    const rows = parseCSV(text);
+
+    // gviz の応答は "google.visualization.Query.setResponse({...});" で
+    // ラップされたJSONP形式なので、前後の余分な文字列を取り除いてパースする。
+    const jsonStart = text.indexOf("{");
+    const jsonEnd = text.lastIndexOf("}");
+    const json = JSON.parse(text.substring(jsonStart, jsonEnd + 1));
+
+    const rawRows = (json.table && json.table.rows) ? json.table.rows : [];
+    // 列: name, stage, score(今回加点), total(累計), time
+    const latestByGroup = {}; // グループ名ごとに最新行を保持
+    rawRows.forEach(row => {
+      const cells = (row.c || []).map(cell => (cell ? cell.v : ""));
+      const [name, stage, scoreDelta, total, time] = cells;
+      if(!name) return; // 空行はスキップ
+      // 同じ名前の行が複数あっても、後の行（=新しい行）で上書きされていくので
+      // 最終的に各グループの最新累計だけが残る。
+      latestByGroup[name] = {
+        name: String(name),
+        score: Number(total) || 0,
+        timestamp: time || ""
+      };
+    });
+
+    const rows = Object.values(latestByGroup);
+    if(rows.length === 0) throw new Error("シートにデータがありません");
     renderRanking(rows);
   }catch(err){
     console.warn("[Z-INFECTION] ランキング取得エラー:", err.message);
-    // デモ用のサンプルデータで表示（URL未設定時のプレビュー用）
+    // デモ用のサンプルデータで表示（未設定・取得失敗時のプレビュー用）
     renderRanking([
       { name: "ゾンビハンターK", score: "12500" },
       { name: "サバイバー疾風", score: "9800" },
@@ -905,11 +941,10 @@ async function loadWaitingStatus(){
 /* ==========================================================================
    初期化
    ========================================================================== */
-document.getElementById.length; // no-op guard for older linters
 loadRanking();
 loadWaitingStatus();
-// 5分ごとに自動更新
-setInterval(loadRanking, 5 * 60 * 1000);
+// ランキングは加点ログに合わせて短い間隔で自動更新。待ち時間は5分ごと。
+setInterval(loadRanking, RANKING_POLL_INTERVAL_MS);
 setInterval(loadWaitingStatus, 5 * 60 * 1000);
 </script>
 </body>
