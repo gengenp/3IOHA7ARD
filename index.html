@@ -374,9 +374,9 @@ section.block:nth-of-type(odd){ background:linear-gradient(180deg, transparent, 
   background:linear-gradient(180deg, rgba(57,255,106,0.06), transparent 40%);
   pointer-events:none;
 }
-.podium-card.rank-1{ border-color:var(--red); order:2; transform:translateY(-14px); }
-.podium-card.rank-2{ order:1; }
-.podium-card.rank-3{ order:3; }
+.podium-card.rank-1{ border-color:var(--red); transform:translateY(-14px); }
+.podium-card.rank-2{}
+.podium-card.rank-3{}
 @media (max-width:760px){
   .podium-card.rank-1, .podium-card.rank-2, .podium-card.rank-3{ order:initial; transform:none; }
 }
@@ -622,14 +622,14 @@ a:focus-visible, button:focus-visible{
 
       <div class="podium" id="podium">
         <!-- JS が生成 / 読込中はプレースホルダー -->
-        <div class="podium-card rank-2">
-          <div class="podium-rank">2ND</div>
+        <div class="podium-card rank-1">
+          <div class="podium-rank">1ST</div>
           <div class="podium-title loading-row">読込中<span class="blink">_</span></div>
           <div class="podium-name">---</div>
           <div class="podium-score">----<span class="u">pt</span></div>
         </div>
-        <div class="podium-card rank-1">
-          <div class="podium-rank">1ST</div>
+        <div class="podium-card rank-2">
+          <div class="podium-rank">2ND</div>
           <div class="podium-title loading-row">読込中<span class="blink">_</span></div>
           <div class="podium-name">---</div>
           <div class="podium-score">----<span class="u">pt</span></div>
@@ -804,8 +804,8 @@ function renderRanking(rows){
   // --- TOP3 ---
   const podium = document.getElementById('podium');
   const rankOrder = [
-    { idx: 1, label: "2ND", cls: "rank-2" },
     { idx: 0, label: "1ST", cls: "rank-1" },
+    { idx: 1, label: "2ND", cls: "rank-2" },
     { idx: 2, label: "3RD", cls: "rank-3" },
   ];
   podium.innerHTML = rankOrder.map(r => {
