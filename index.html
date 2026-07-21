@@ -36,13 +36,15 @@
 
 *{ box-sizing:border-box; margin:0; padding:0; }
 
-html{ scroll-behavior:smooth; }
+html{ scroll-behavior:smooth; overflow-x:hidden; max-width:100%; }
 
 body{
   background:var(--void);
   color:var(--bone);
   font-family:var(--font-mono);
   min-height:100vh;
+  width:100%;
+  max-width:100%;
   position:relative;
   overflow-x:hidden;
   -webkit-font-smoothing:antialiased;
@@ -121,7 +123,11 @@ header{
   align-items:center;
   justify-content:space-between;
   gap:1rem;
+  overflow-x:auto;
+  -webkit-overflow-scrolling:touch;
+  scrollbar-width:none;
 }
+.header-inner::-webkit-scrollbar{ display:none; }
 .brand{
   display:flex; align-items:center; gap:.6rem;
   font-family:var(--font-display);
@@ -129,6 +135,7 @@ header{
   font-size:clamp(.95rem, 2.4vw, 1.25rem);
   letter-spacing:.05em;
   white-space:nowrap;
+  flex-shrink:0;
 }
 .brand-mark{
   width:26px; height:26px; flex:0 0 auto;
@@ -136,13 +143,16 @@ header{
 }
 .brand span{ color:var(--green); }
 
+nav{ flex-shrink:0; }
 nav ul{
   list-style:none; display:flex; gap:clamp(.8rem,2vw,2rem);
   font-family:var(--font-mono); font-size:.78rem; letter-spacing:.12em;
+  flex-shrink:0;
 }
 nav a{
   position:relative; padding:.3rem 0; color:var(--bone-dim);
   transition:color .2s;
+  white-space:nowrap;
 }
 nav a:hover, nav a:active, nav a:focus-visible{ color:var(--green); outline:none; }
 nav a::after{
@@ -189,6 +199,16 @@ nav a:hover::after, nav a:active::after, nav a:focus-visible::after{ width:100%;
 @keyframes scrollWarn{
   0%{ transform:translate3d(0,0,0); }
   100%{ transform:translate3d(-50%,0,0); }
+}
+
+.hero-grid > *,
+.mission-layout > *,
+.access-layout > *,
+.podium-card,
+.status-readout,
+.cam-panel,
+.seal-wrap{
+  min-width:0;
 }
 
 .hero-grid{
@@ -332,6 +352,73 @@ nav a:hover::after, nav a:active::after, nav a:focus-visible::after{ width:100%;
   background:linear-gradient(90deg, var(--green), var(--amber), var(--red));
   transition:width .8s ease;
 }
+
+/* ---- LIVE CHALLENGER SCORE: surveillance-camera panel ---- */
+.cam-panel{
+  width:100%;
+  max-width:340px;
+  position:relative;
+  border:1px solid var(--red-dim);
+  background:
+    repeating-linear-gradient(to bottom, rgba(255,255,255,0.025) 0px, rgba(255,255,255,0.025) 1px, transparent 1px, transparent 3px),
+    var(--panel-2);
+  padding:.9rem 1.1rem 1.1rem;
+}
+.cam-topbar{
+  display:flex; align-items:center; justify-content:space-between;
+  font-family:var(--font-mono); font-size:.62rem; letter-spacing:.12em;
+  padding-bottom:.6rem; margin-bottom:.7rem;
+  border-bottom:1px dashed var(--red-dim);
+  color:var(--bone-dim);
+}
+.cam-live{
+  display:inline-flex; align-items:center; gap:.4rem;
+  color:var(--red);
+  font-weight:700;
+  animation:camLiveBlink 1.4s steps(1) infinite;
+}
+.cam-dot{
+  width:8px; height:8px; border-radius:50%;
+  background:var(--red);
+  box-shadow:0 0 6px 1px rgba(255,43,43,.8);
+  flex:0 0 auto;
+}
+@keyframes camLiveBlink{
+  0%,55%{ opacity:1; }
+  56%,100%{ opacity:.35; }
+}
+.cam-id{ color:var(--bone-dim); opacity:.7; }
+.cam-body{ position:relative; }
+.cam-row{
+  display:flex; justify-content:space-between; align-items:baseline;
+  padding:.4rem 0;
+}
+.cam-label{
+  font-family:var(--font-mono); font-size:.68rem; letter-spacing:.1em;
+  color:var(--bone-dim);
+}
+.cam-value{
+  font-family:var(--font-display); font-weight:700; color:var(--bone);
+  font-size:1.1rem; text-align:right; word-break:break-word;
+}
+.cam-value.cam-score{ color:var(--green); font-size:1.7rem; }
+.cam-value .unit{ font-size:.7rem; color:var(--bone-dim); font-family:var(--font-mono); margin-left:.25rem; }
+.cam-meta{
+  display:flex; justify-content:space-between;
+  margin-top:.5rem; padding-top:.5rem;
+  border-top:1px dashed var(--line);
+  font-size:.62rem; letter-spacing:.08em; color:var(--bone-dim);
+  font-family:var(--font-mono);
+}
+.cam-corner{
+  position:absolute; width:14px; height:14px;
+  border:2px solid var(--red);
+  opacity:.8;
+}
+.cam-corner.tl{ top:-1px; left:-1px; border-right:none; border-bottom:none; }
+.cam-corner.tr{ top:-1px; right:-1px; border-left:none; border-bottom:none; }
+.cam-corner.bl{ bottom:-1px; left:-1px; border-right:none; border-top:none; }
+.cam-corner.br{ bottom:-1px; right:-1px; border-left:none; border-top:none; }
 
 /* ==========================================================================
    SECTION HEADERS (shared)
@@ -612,6 +699,31 @@ a:focus-visible, button:focus-visible{
             <div class="infection-bar"><div class="infection-bar-fill" id="infectionFill"></div></div>
           </div>
         </div>
+
+        <div class="cam-panel" id="live-challenger">
+          <div class="cam-topbar">
+            <span class="cam-live"><span class="cam-dot" aria-hidden="true"></span>LIVE CHALLENGER SCORE</span>
+            <span class="cam-id">CAM-07</span>
+          </div>
+          <div class="cam-body">
+            <div class="cam-row">
+              <span class="cam-label">NICKNAME</span>
+              <span class="cam-value" id="liveChallengerName">待機中<span class="blink">_</span></span>
+            </div>
+            <div class="cam-row">
+              <span class="cam-label">SCORE</span>
+              <span class="cam-value cam-score" id="liveChallengerScore">----<span class="unit">pt</span></span>
+            </div>
+            <div class="cam-meta">
+              <span id="liveChallengerStage">STAGE: --</span>
+              <span id="liveChallengerTime">--:--:--</span>
+            </div>
+          </div>
+          <div class="cam-corner tl"></div>
+          <div class="cam-corner tr"></div>
+          <div class="cam-corner bl"></div>
+          <div class="cam-corner br"></div>
+        </div>
       </div>
     </div>
   </section>
@@ -658,7 +770,7 @@ a:focus-visible, button:focus-visible{
           </tbody>
         </table>
       </div>
-      <p class="ranking-note">※ ランキングは数分ごとに自動更新されます。称号: S=伝説の傭兵 / A=エリート / B=一般市民</p>
+      <p class="ranking-note">※ ランキングは数秒ごとに自動更新されます。称号: S=伝説の傭兵 / A=エリート / B=一般市民</p>
     </div>
   </section>
 
@@ -737,10 +849,17 @@ a:focus-visible, button:focus-visible{
 /* ==========================================================================
    設定: 差し替え用URL
    ========================================================================== */
-// ランキングデータ（Googleスプレッドシート gviz JSON エンドポイント）
-// 仲間のMac側システムが「撃つたびに1行追記」する形式のシートに対応。
-// シート列: name(グループ名), stage(UNO1/UNO2/ESP32), score(今回の加点), total(累計), time(タイムスタンプ)
-const RANKING_JSON_URL = "https://docs.google.com/spreadsheets/d/1XoOn6FrQ1KaUa8O8whfINrN9HUtUpMBys82kcBoJe6Y/gviz/tq?tqx=out:json";
+// Python側（司令塔）がスプレッドシートに自動書き込みする2枚のシートに対応。
+// SHEET_ID: 1XoOn6FrQ1KaUa8O8whfINrN9HUtUpMBys82kcBoJe6Y
+//
+// ・NOW シート … 常に1行だけ。今まさにプレイ中のチャレンジャー情報。
+//   列: A=プレイヤー名, B=ステージ名(UNO1/UNO2/ESP32), C=今回の得点, D=直前TOTAL, E=時刻
+// ・RANK シート … プレイ履歴が1行ずつ増えていく。ランキング表示用。
+//   列: A=プレイヤー名, B=ステージ名, C=得点, D=直前TOTAL, E=時刻
+//   ※ D列は「このプレイが加算される前の累計」なので、
+//     このプレイ後の累計は D + C で算出する。
+const NOW_JSON_URL  = "https://docs.google.com/spreadsheets/d/1XoOn6FrQ1KaUa8O8whfINrN9HUtUpMBys82kcBoJe6Y/gviz/tq?tqx=out:json&sheet=NOW";
+const RANK_JSON_URL = "https://docs.google.com/spreadsheets/d/1XoOn6FrQ1KaUa8O8whfINrN9HUtUpMBys82kcBoJe6Y/gviz/tq?tqx=out:json&sheet=RANK";
 
 // 待ち時間CSVのURL（列: timestamp,waiting_time,status）
 const WAITING_CSV_URL = "ここに待ち時間CSVのURLを入力";
@@ -748,8 +867,8 @@ const WAITING_CSV_URL = "ここに待ち時間CSVのURLを入力";
 // 校内マップ画像のURL（差し替え用）
 const MAP_IMAGE_URL = "https://placehold.co/640x420/0b0908/8a7f72?text=SCHOOL+MAP+%28DUMMY%29";
 
-// ランキング自動更新の間隔（ミリ秒）。撃つたびに追記されるログなので短めに設定。
-// 0.5秒だとGoogle側の制限に引っかかりやすいため、3秒を推奨値としています。
+// 自動更新の間隔（ミリ秒）。仕様書の推奨値（NOW=1秒, RANK=3秒）に合わせています。
+const LIVE_POLL_INTERVAL_MS = 1000;
 const RANKING_POLL_INTERVAL_MS = 3000;
 
 /* ==========================================================================
@@ -857,42 +976,47 @@ function escapeHTML(str){
 }
 
 /* ==========================================================================
-   ランキング取得: gviz JSON（撃つたびに1行追記されるログ形式）
-   グループ名(name)ごとに「最新の累計スコア(total)」を拾って集計し、
-   それを既存の renderRanking({name, score}) にそのまま渡す。
+   共通: gviz JSONのJSONPラッパーを取り除いてパースする
+   ========================================================================== */
+function parseGvizJSON(text){
+  const jsonStart = text.indexOf("{");
+  const jsonEnd = text.lastIndexOf("}");
+  return JSON.parse(text.substring(jsonStart, jsonEnd + 1));
+}
+
+/* ==========================================================================
+   ランキング取得: RANK シート（プレイのたびに1行追記されるログ）
+   列: A=プレイヤー名, B=ステージ名, C=今回の得点, D=直前TOTAL, E=時刻
+   D列は「このプレイが加算される前の累計」なので、
+   プレイヤーごとに最新行の (D + C) を「現在の累計スコア」として使う。
    ========================================================================== */
 async function loadRanking(){
   try{
-    if(!RANKING_JSON_URL || RANKING_JSON_URL.startsWith("ここに")){
-      throw new Error("RANKING_JSON_URL が未設定です");
+    if(!RANK_JSON_URL || RANK_JSON_URL.startsWith("ここに")){
+      throw new Error("RANK_JSON_URL が未設定です");
     }
-    const res = await fetch(RANKING_JSON_URL);
+    const res = await fetch(RANK_JSON_URL);
     if(!res.ok) throw new Error("シート取得に失敗: " + res.status);
     const text = await res.text();
-
-    // gviz の応答は "google.visualization.Query.setResponse({...});" で
-    // ラップされたJSONP形式なので、前後の余分な文字列を取り除いてパースする。
-    const jsonStart = text.indexOf("{");
-    const jsonEnd = text.lastIndexOf("}");
-    const json = JSON.parse(text.substring(jsonStart, jsonEnd + 1));
+    const json = parseGvizJSON(text);
 
     const rawRows = (json.table && json.table.rows) ? json.table.rows : [];
-    // 列: name, stage, score(今回加点), total(累計), time
-    const latestByGroup = {}; // グループ名ごとに最新行を保持
+    const latestByPlayer = {}; // プレイヤーごとに最新行を保持
     rawRows.forEach(row => {
       const cells = (row.c || []).map(cell => (cell ? cell.v : ""));
-      const [name, stage, scoreDelta, total, time] = cells;
-      if(!name) return; // 空行はスキップ
+      const [player, stage, score, prevTotal, time] = cells;
+      if(!player) return; // 空行はスキップ
+      const currentTotal = (Number(prevTotal) || 0) + (Number(score) || 0);
       // 同じ名前の行が複数あっても、後の行（=新しい行）で上書きされていくので
-      // 最終的に各グループの最新累計だけが残る。
-      latestByGroup[name] = {
-        name: String(name),
-        score: Number(total) || 0,
+      // 最終的に各プレイヤーの最新累計だけが残る。
+      latestByPlayer[player] = {
+        name: String(player),
+        score: currentTotal,
         timestamp: time || ""
       };
     });
 
-    const rows = Object.values(latestByGroup);
+    const rows = Object.values(latestByPlayer);
     if(rows.length === 0) throw new Error("シートにデータがありません");
     renderRanking(rows);
   }catch(err){
@@ -907,6 +1031,46 @@ async function loadRanking(){
       { name: "見習い救助隊", score: "4300" },
       { name: "新人パトロール", score: "2100" },
     ]);
+  }
+}
+
+/* ==========================================================================
+   LIVE CHALLENGER SCORE: NOW シート（常に1行だけ）を読み取って
+   「今まさにプレイ中」のニックネームとスコアを表示する。
+   ========================================================================== */
+async function loadLiveChallenger(){
+  const nameEl = document.getElementById('liveChallengerName');
+  const scoreEl = document.getElementById('liveChallengerScore');
+  const stageEl = document.getElementById('liveChallengerStage');
+  const timeEl = document.getElementById('liveChallengerTime');
+
+  try{
+    if(!NOW_JSON_URL || NOW_JSON_URL.startsWith("ここに")){
+      throw new Error("NOW_JSON_URL が未設定です");
+    }
+    const res = await fetch(NOW_JSON_URL);
+    if(!res.ok) throw new Error("シート取得に失敗: " + res.status);
+    const text = await res.text();
+    const json = parseGvizJSON(text);
+
+    const rows = (json.table && json.table.rows) ? json.table.rows : [];
+    if(rows.length === 0 || !rows[0].c) throw new Error("NOWシートにデータがありません");
+
+    const cells = rows[0].c.map(cell => (cell ? cell.v : ""));
+    const [player, stage, score, total, time] = cells;
+    if(!player) throw new Error("プレイヤー名が空です");
+
+    nameEl.textContent = String(player);
+    scoreEl.innerHTML = `${(Number(total) || 0).toLocaleString()}<span class="unit">pt</span>`;
+    stageEl.textContent = "STAGE: " + (stage || "--");
+    timeEl.textContent = time || "--:--:--";
+  }catch(err){
+    console.warn("[Z-INFECTION] LIVEチャレンジャー取得エラー:", err.message);
+    // デモ用サンプル値（未設定・取得失敗時のプレビュー用）
+    nameEl.textContent = "ゾンビハンターK";
+    scoreEl.innerHTML = `3,200<span class="unit">pt</span>`;
+    stageEl.textContent = "STAGE: UNO1";
+    timeEl.textContent = "デモ表示";
   }
 }
 
@@ -947,9 +1111,11 @@ async function loadWaitingStatus(){
 /* ==========================================================================
    初期化
    ========================================================================== */
+loadLiveChallenger();
 loadRanking();
 loadWaitingStatus();
-// ランキングは加点ログに合わせて短い間隔で自動更新。待ち時間は5分ごと。
+// LIVEチャレンジャーは1秒ごと、ランキングは3秒ごとに自動更新。待ち時間は5分ごと。
+setInterval(loadLiveChallenger, LIVE_POLL_INTERVAL_MS);
 setInterval(loadRanking, RANKING_POLL_INTERVAL_MS);
 setInterval(loadWaitingStatus, 5 * 60 * 1000);
 </script>
