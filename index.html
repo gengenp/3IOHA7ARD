@@ -786,13 +786,13 @@ a:focus-visible, button:focus-visible{
 
       <div class="mission-layout">
         <div class="mission-log">
-          <p><strong>状況報告 —</strong> 20XX年、文化祭当日。校舎地下研究室から流出した未知のウイルス「Zウイルス」が、校内の一部エリアを汚染した。</p>
+          <p><strong>状況報告 —</strong> 20XX年、文化祭当日。校舎地下研究室から流出した未知のウイルスが、校内の一部エリアを汚染した。</p>
           <p>感染者（ゾンビ）は既に徘徊を開始している。生存者救出チームとして、あなたは限られた弾薬でエリア内を突破しなければならない。</p>
           <p><strong>目標 —</strong> 制限時間内にすべての感染体を無力化し、脱出ポイントまで到達すること。スコアは撃破数・命中精度・残り時間から算出される。</p>
         </div>
 
         <ul class="rules-list">
-          <li><span class="tag">RULE</span> 1人〜4人でチーム編成が可能。所要時間は約5分。</li>
+          <li><span class="tag">RULE</span> 1人〜2人でチーム編成が可能。所要時間は約5分。</li>
           <li><span class="tag">RULE</span> 専用ガンコントローラーでゾンビをシューティング。</li>
           <li><span class="tag">RULE</span> スコアはプレイ終了後に即時ランキングへ反映されます。</li>
           <li><span class="tag warn">注意</span> 小学生以下は保護者同伴でのご参加をお願いします。</li>
@@ -1020,16 +1020,16 @@ async function loadRanking(){
     if(rows.length === 0) throw new Error("シートにデータがありません");
     renderRanking(rows);
   }catch(err){
-    console.warn("[Z-INFECTION] ランキング取得エラー:", err.message);
+    console.warn("[3IOHA7ARD] ランキング取得エラー:", err.message);
     // デモ用のサンプルデータで表示（未設定・取得失敗時のプレビュー用）
     renderRanking([
-      { name: "ゾンビハンターK", score: "12500" },
-      { name: "サバイバー疾風", score: "9800" },
-      { name: "名もなき衛生兵", score: "8600" },
-      { name: "夜行のライフル手", score: "7200" },
-      { name: "隔離区域の亡霊", score: "6100" },
-      { name: "見習い救助隊", score: "4300" },
-      { name: "新人パトロール", score: "2100" },
+      { name: "デモ1", score: "12500" },
+      { name: "デモ2", score: "9800" },
+      { name: "デモ3", score: "8600" },
+      { name: "デモ4", score: "7200" },
+      { name: "デモ5", score: "6100" },
+      { name: "デモ6", score: "4300" },
+      { name: "デモ7", score: "334" },
     ]);
   }
 }
@@ -1065,9 +1065,9 @@ async function loadLiveChallenger(){
     stageEl.textContent = "STAGE: " + (stage || "--");
     timeEl.textContent = time || "--:--:--";
   }catch(err){
-    console.warn("[Z-INFECTION] LIVEチャレンジャー取得エラー:", err.message);
+    console.warn("[3IOHA7ARD] LIVEチャレンジャー取得エラー:", err.message);
     // デモ用サンプル値（未設定・取得失敗時のプレビュー用）
-    nameEl.textContent = "ゾンビハンターK";
+    nameEl.textContent = "デモ";
     scoreEl.innerHTML = `3,200<span class="unit">pt</span>`;
     stageEl.textContent = "STAGE: UNO1";
     timeEl.textContent = "デモ表示";
@@ -1095,7 +1095,7 @@ async function loadWaitingStatus(){
     const latest = rows[rows.length - 1];
     applyWaitingStatus(Number(latest.waiting_time) || 0, latest.status || "受付中");
   }catch(err){
-    console.warn("[Z-INFECTION] 待ち時間取得エラー:", err.message);
+    console.warn("[3IOHA7ARD] 待ち時間取得エラー:", err.message);
     // デモ用サンプル値
     applyWaitingStatus(45, "配布中");
   }
