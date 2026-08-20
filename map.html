@@ -1,0 +1,634 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+<meta name="robots" content="noindex">
+<title>構内マップ | PROJECT: Z-INFECTION</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<style>
+/* ==========================================================================
+   構内マップ（フルページ版）
+   - トップページと同じバイオハザード配色（赤×緑）を踏襲
+   - SVGフロア図は fetch + DOMParser(image/svg+xml) で読み込む。
+     ※ インラインSVG埋め込みにすると、Figmaが出力した壊れたid
+       （UTF-8バイトを数値文字参照にしてしまう既知のバグ）が
+       HTML5パーサーのWindows-1252互換ルールで二重に化けてしまうため、
+       必ず「別ファイルをXMLとして読み込む」方式にすること。
+   ========================================================================== */
+:root{
+  --void:        #050403;
+  --panel:       #0b0908;
+  --panel-2:     #120d0c;
+  --line:        #2a1414;
+  --red:         #ff2b2b;
+  --red-dim:     #7a1414;
+  --red-glow:    #ff5252;
+  --green:       #39ff6a;
+  --green-dim:   #0f4a22;
+  --amber:       #ffb020;
+  --bone:        #d8cfc2;
+  --bone-dim:    #8a7f72;
+  --font-display: 'Orbitron', sans-serif;
+  --font-mono:    'Share Tech Mono', monospace;
+}
+*{ box-sizing:border-box; margin:0; padding:0; }
+html,body{ overflow-x:hidden; max-width:100%; }
+body{
+  background:var(--void);
+  color:var(--bone);
+  font-family:var(--font-mono);
+  min-height:100vh;
+  width:100%;
+  -webkit-font-smoothing:antialiased;
+}
+a{ color:inherit; text-decoration:none; }
+
+/* ---- header ---- */
+header{
+  position:sticky; top:0; z-index:500;
+  background:linear-gradient(to bottom, rgba(5,4,3,0.97), rgba(5,4,3,0.9));
+  border-bottom:1px solid var(--line);
+  -webkit-backdrop-filter:blur(4px);
+  backdrop-filter:blur(4px);
+  padding:.8rem 4vw;
+  display:flex; align-items:center; justify-content:space-between; gap:1rem;
+  overflow-x:auto; -webkit-overflow-scrolling:touch; scrollbar-width:none;
+}
+header::-webkit-scrollbar{ display:none; }
+.brand{
+  display:flex; align-items:center; gap:.5rem;
+  font-family:var(--font-display); font-weight:900;
+  font-size:.95rem; letter-spacing:.05em; white-space:nowrap; flex-shrink:0;
+  color:var(--bone);
+}
+.brand span{ color:var(--green); }
+.back-link{
+  font-family:var(--font-mono); font-size:.7rem; letter-spacing:.1em;
+  color:var(--bone-dim); border:1px solid var(--line); padding:.4rem .8rem;
+  flex-shrink:0; white-space:nowrap;
+}
+.back-link:active{ color:var(--green); border-color:var(--green); }
+
+/* ---- floor tabs ---- */
+.floor-tabs{
+  display:flex; gap:.5rem; padding:.8rem 4vw;
+  border-bottom:1px solid var(--line);
+  background:var(--panel-2);
+  overflow-x:auto; -webkit-overflow-scrolling:touch;
+}
+.floor-tab{
+  font-family:var(--font-display); font-weight:700; font-size:.85rem;
+  padding:.55rem 1.1rem; border:1px solid var(--line); color:var(--bone-dim);
+  background:var(--panel); flex-shrink:0; letter-spacing:.05em;
+}
+.floor-tab.active{ color:var(--void); background:var(--green); border-color:var(--green); }
+
+/* ---- map viewport ---- */
+.map-viewport{
+  position:relative;
+  width:100%;
+  height:calc(100vh - 140px);
+  min-height:360px;
+  overflow:hidden;
+  background:
+    repeating-linear-gradient(45deg, #0d0908 0px, #0d0908 12px, #100b09 12px, #100b09 24px);
+  touch-action:none;
+}
+.map-stage{
+  position:absolute; top:0; left:0;
+  transform-origin:0 0;
+  will-change:transform;
+}
+.map-stage svg{ display:block; }
+
+/* room fills, driven by prefix classification (JS adds these classes) */
+.room-corridor{ fill:#1a1210 !important; stroke:#3a2a20 !important; cursor:default; }
+.room-equip{ fill:#100c0a !important; stroke:#2a1414 !important; cursor:default; opacity:.6; }
+.room-unused{ fill:#241616 !important; stroke:var(--line) !important; cursor:pointer; }
+.room-unused:active{ fill:#3a2020 !important; }
+.room-attraction{ fill:#0f2a18 !important; stroke:var(--green) !important; cursor:pointer; }
+.room-attraction:active{ fill:#164026 !important; }
+.room-flash{ animation:roomFlash .5s ease; }
+@keyframes roomFlash{
+  0%{ filter:brightness(2.4); } 100%{ filter:brightness(1); }
+}
+
+.zoom-hint{
+  position:absolute; bottom:.8rem; left:50%; transform:translateX(-50%);
+  font-family:var(--font-mono); font-size:.65rem; color:var(--bone-dim);
+  background:rgba(5,4,3,.75); padding:.35rem .8rem; border:1px solid var(--line);
+  pointer-events:none; letter-spacing:.05em; z-index:5;
+}
+
+/* ---- schedule button ---- */
+.schedule-btn{
+  position:fixed; right:1rem; bottom:1rem; z-index:600;
+  font-family:var(--font-display); font-weight:700; font-size:.72rem;
+  color:var(--void); background:var(--amber);
+  border:none; padding:.85rem 1rem; letter-spacing:.03em;
+  box-shadow:0 2px 10px rgba(0,0,0,.5);
+}
+.schedule-btn:active{ filter:brightness(.9); }
+
+/* ---- popup overlay (room card / simple / schedule) ---- */
+.overlay{
+  position:fixed; inset:0; z-index:1000;
+  background:rgba(2,1,1,.78);
+  display:flex; align-items:flex-end; justify-content:center;
+  opacity:0; pointer-events:none;
+  transition:opacity .15s ease;
+}
+.overlay.show{ opacity:1; pointer-events:auto; }
+.sheet{
+  width:100%; max-width:520px;
+  background:var(--panel);
+  border-top:1px solid var(--red-dim);
+  padding:1.3rem 1.3rem 1.6rem;
+  max-height:82vh; overflow-y:auto;
+  transform:translateY(12px);
+  transition:transform .15s ease;
+}
+.overlay.show .sheet{ transform:translateY(0); }
+.sheet-close{
+  display:block; margin-left:auto; margin-bottom:.6rem;
+  font-family:var(--font-mono); font-size:.7rem; color:var(--bone-dim);
+  border:1px solid var(--line); background:transparent; padding:.35rem .7rem;
+}
+
+/* simple popup (c-prefixed rooms) */
+.simple-name{
+  font-family:var(--font-display); font-size:1.2rem; color:var(--bone);
+  border-left:3px solid var(--line); padding-left:.8rem;
+}
+.simple-note{ margin-top:.6rem; font-size:.75rem; color:var(--bone-dim); }
+
+/* card popup (attraction rooms) */
+.card-tag{
+  display:inline-block; font-family:var(--font-mono); font-size:.65rem;
+  letter-spacing:.08em; padding:.25rem .6rem; color:var(--void);
+  background:var(--green); margin-bottom:.7rem;
+}
+.card-title{
+  font-family:var(--font-display); font-size:1.35rem; color:var(--bone);
+  margin-bottom:.3rem; line-height:1.3;
+}
+.card-team{ font-family:var(--font-mono); font-size:.75rem; color:var(--amber); letter-spacing:.05em; }
+.card-desc{ margin-top:.8rem; font-size:.85rem; line-height:1.7; color:var(--bone-dim); }
+
+/* ---- schedule modal ---- */
+.sched-tabs{ display:flex; gap:.5rem; margin-bottom:.9rem; }
+.sched-tab{
+  font-family:var(--font-display); font-size:.75rem; padding:.4rem .9rem;
+  border:1px solid var(--line); color:var(--bone-dim); background:transparent;
+}
+.sched-tab.active{ color:var(--void); background:var(--red); border-color:var(--red); }
+.sched-grid{ position:relative; border:1px solid var(--line); }
+.sched-row{
+  display:flex; border-bottom:1px dashed var(--line); font-size:.72rem;
+  padding:.5rem .7rem; color:var(--bone-dim);
+}
+.sched-row:last-child{ border-bottom:none; }
+.sched-time{ width:4.2rem; flex-shrink:0; color:var(--green); font-family:var(--font-display); }
+.sched-live-line{
+  position:absolute; left:0; right:0; height:2px; background:var(--red);
+  box-shadow:0 0 6px 1px rgba(255,43,43,.8); pointer-events:none;
+}
+.sched-live-label{
+  position:absolute; right:.4rem; transform:translateY(-100%);
+  font-size:.6rem; color:var(--red); font-family:var(--font-mono);
+}
+
+@media (prefers-reduced-motion: reduce){
+  *{ animation-duration:0.001ms !important; transition-duration:0.001ms !important; }
+}
+</style>
+</head>
+<body ontouchstart="">
+
+<header>
+  <div class="brand">PROJECT: <span>Z-INFECTION</span> — MAP</div>
+  <a href="index.html" class="back-link">← トップに戻る</a>
+</header>
+
+<div class="floor-tabs" id="floorTabs">
+  <button class="floor-tab" data-floor="1F">1F</button>
+  <button class="floor-tab" data-floor="2F">2F</button>
+  <button class="floor-tab" data-floor="3F">3F</button>
+  <button class="floor-tab" data-floor="4F">4F</button>
+</div>
+
+<div class="map-viewport" id="mapViewport">
+  <div class="map-stage" id="mapStage"></div>
+  <div class="zoom-hint">指1本でスワイプ / 指2本でピンチズーム</div>
+</div>
+
+<button class="schedule-btn" id="scheduleOpenBtn">🕒 ステージ・体育館<br>スケジュール</button>
+
+<!-- 部屋ポップアップ（シンプル / カード 共用オーバーレイ） -->
+<div class="overlay" id="roomOverlay">
+  <div class="sheet" id="roomSheet"></div>
+</div>
+
+<!-- スケジュールモーダル -->
+<div class="overlay" id="scheduleOverlay">
+  <div class="sheet" id="scheduleSheet">
+    <button class="sheet-close" data-close="scheduleOverlay">閉じる ✕</button>
+    <div class="sched-tabs">
+      <button class="sched-tab active" data-day="1">1日目</button>
+      <button class="sched-tab" data-day="2">2日目</button>
+    </div>
+    <div class="sched-grid" id="schedGrid"></div>
+    <p style="margin-top:.8rem; font-size:.68rem; color:var(--bone-dim);">
+      ※ 時程は仮データです。確定次第 SCHEDULE_DATA を差し替えてください。
+    </p>
+  </div>
+</div>
+
+<script>
+/* ==========================================================================
+   1. Figmaのidエンコード崩れを復元するデコーダー
+   ========================================================================== */
+function decodeMojibakeId(str){
+  const bytes = [];
+  for (const ch of str){
+    const code = ch.codePointAt(0);
+    if (code < 256){
+      bytes.push(code);
+    } else {
+      bytes.push(...new TextEncoder().encode(ch));
+    }
+  }
+  return new TextDecoder('utf-8').decode(new Uint8Array(bytes));
+}
+
+/* ==========================================================================
+   2. プレフィックス判定
+   b / e = 通路（クリック無効）
+   c     = 使用しない部屋（シンプルポップアップ）
+   d     = 設備・階段（クリック無効）
+   それ以外 = アトラクション（カード型ポップアップ）
+   ========================================================================== */
+function classify(name){
+  const p = name.charAt(0);
+  if (p === 'b' || p === 'e') return 'corridor';
+  if (p === 'c') return 'unused';
+  if (p === 'd') return 'equip';
+  return 'attraction';
+}
+
+/* ==========================================================================
+   3. 部屋データ（団体名・タグ・紹介文）
+   まだ紙のデータしか無いため、現時点ではすべて未入力プレースホルダー。
+   ここにキー（部屋名／教室番号）を追加していけば、そのままカードに反映される。
+   例:
+     "3-7": { tag: "アトラクション", title: "PROJECT: Z-INFECTION",
+               team: "3-7", desc: "ゾンビを撃って撃って撃ちまくれ。" },
+   ========================================================================== */
+const ROOM_DATA = {
+  // ここに追記していく
+};
+
+function getRoomInfo(name){
+  const d = ROOM_DATA[name] || {};
+  return {
+    tag:   d.tag   || '未入力',
+    title: d.title || name,
+    team:  d.team  || name,
+    desc:  d.desc  || '紹介文は未入力です。'
+  };
+}
+
+/* ==========================================================================
+   4. スケジュールのダミーデータ（時程が決まったら差し替え）
+   ========================================================================== */
+const SCHEDULE_DATA = {
+  1: [
+    { time:'10:00', label:'開会式' },
+    { time:'10:30', label:'吹奏楽部 演奏' },
+    { time:'12:00', label:'ダンス部 発表' },
+    { time:'14:00', label:'有志ステージ' },
+    { time:'15:30', label:'クロージング' },
+  ],
+  2: [
+    { time:'10:00', label:'合唱コンクール表彰' },
+    { time:'11:00', label:'軽音楽部 演奏' },
+    { time:'13:00', label:'ミスターコンテスト' },
+    { time:'15:00', label:'閉会式' },
+  ]
+};
+
+/* ==========================================================================
+   5. フロア読み込み（fetch + DOMParser。インライン埋め込みは絶対にしない）
+   ========================================================================== */
+const FLOOR_FILES = { '1F':'assets/floors/1F.svg', '2F':'assets/floors/2F.svg', '3F':'assets/floors/3F.svg', '4F':'assets/floors/4F.svg' };
+const floorCache = {};
+let currentFloor = null;
+let clickableEls = []; // {el, name, kind, cx, cy}
+
+async function loadFloor(floorKey){
+  const stage = document.getElementById('mapStage');
+  currentFloor = floorKey;
+
+  document.querySelectorAll('.floor-tab').forEach(t => {
+    t.classList.toggle('active', t.dataset.floor === floorKey);
+  });
+
+  let svgEl;
+  if (floorCache[floorKey]){
+    svgEl = floorCache[floorKey];
+  } else {
+    const res = await fetch(FLOOR_FILES[floorKey]);
+    const text = await res.text();
+    const doc = new DOMParser().parseFromString(text, 'image/svg+xml');
+    svgEl = doc.documentElement;
+    floorCache[floorKey] = svgEl;
+  }
+
+  stage.innerHTML = '';
+  const svgClone = svgEl.cloneNode(true);
+  stage.appendChild(svgClone);
+
+  // クリック判定対象を洗い出してスタイル・イベントを付与
+  clickableEls = [];
+  const shapeTags = ['rect','path','polygon','circle','ellipse'];
+  shapeTags.forEach(tag => {
+    svgClone.querySelectorAll(tag + '[id]').forEach(el => {
+      const rawId = el.getAttribute('id');
+      if (/pattern|image|clip|path-/.test(rawId)) return;
+      const name = decodeMojibakeId(rawId);
+      const kind = classify(name);
+      el.classList.add('room-' + kind);
+      if (kind === 'attraction' || kind === 'unused'){
+        let bbox;
+        try { bbox = el.getBBox(); } catch(e){ bbox = {x:0,y:0,width:0,height:0}; }
+        clickableEls.push({
+          el, name, kind,
+          cx: bbox.x + bbox.width/2,
+          cy: bbox.y + bbox.height/2
+        });
+        el.addEventListener('click', (ev) => {
+          ev.stopPropagation();
+          openRoom(name, kind, el);
+        });
+      }
+    });
+  });
+
+  resetView();
+}
+
+/* ==========================================================================
+   6. タップミス救済: 空白部分をタップしたら最寄りのクリック可能な部屋を開く
+   ========================================================================== */
+document.getElementById('mapStage').addEventListener('click', (ev) => {
+  if (ev.target.closest('.room-attraction, .room-unused')) return; // 個別ハンドラで処理済み
+  const stage = document.getElementById('mapStage');
+  const svg = stage.querySelector('svg');
+  if (!svg || clickableEls.length === 0) return;
+  const pt = svg.createSVGPoint();
+  pt.x = ev.offsetX; pt.y = ev.offsetY;
+  // stageは transform されているため、逆行列でSVG内部座標に変換
+  const ctm = svg.getScreenCTM();
+  if (!ctm) return;
+  const rect = stage.getBoundingClientRect();
+  const svgPt = svg.createSVGPoint();
+  svgPt.x = ev.clientX; svgPt.y = ev.clientY;
+  const local = svgPt.matrixTransform(ctm.inverse());
+  let best = null, bestDist = Infinity;
+  clickableEls.forEach(c => {
+    const d = (c.cx - local.x)**2 + (c.cy - local.y)**2;
+    if (d < bestDist){ bestDist = d; best = c; }
+  });
+  // 極端に離れていたら反応しない（画面外タップなどのノイズ防止）
+  if (best && bestDist < (300*300)){
+    best.el.classList.add('room-flash');
+    setTimeout(() => best.el.classList.remove('room-flash'), 500);
+    openRoom(best.name, best.kind, best.el);
+  }
+});
+
+/* ==========================================================================
+   7. ポップアップ描画
+   ========================================================================== */
+function openRoom(name, kind, el){
+  const overlay = document.getElementById('roomOverlay');
+  const sheet = document.getElementById('roomSheet');
+  if (kind === 'unused'){
+    const displayName = name.slice(1); // 先頭の 'c' を除いた部屋名
+    sheet.innerHTML = `
+      <button class="sheet-close" data-close="roomOverlay">閉じる ✕</button>
+      <div class="simple-name">${escapeHTML(displayName)}</div>
+      <div class="simple-note">このスペースは今回のアトラクションでは使用していません。</div>
+    `;
+  } else {
+    const info = getRoomInfo(name);
+    sheet.innerHTML = `
+      <button class="sheet-close" data-close="roomOverlay">閉じる ✕</button>
+      <span class="card-tag">${escapeHTML(info.tag)}</span>
+      <div class="card-title">${escapeHTML(info.title)}</div>
+      <div class="card-team">団体名：${escapeHTML(info.team)}</div>
+      <p class="card-desc">${escapeHTML(info.desc)}</p>
+    `;
+  }
+  overlay.classList.add('show');
+}
+
+function escapeHTML(str){
+  return String(str).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+document.querySelectorAll('[data-close]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.getElementById(btn.dataset.close).classList.remove('show');
+  });
+});
+document.querySelectorAll('.overlay').forEach(ov => {
+  ov.addEventListener('click', (e) => { if (e.target === ov) ov.classList.remove('show'); });
+});
+
+/* ==========================================================================
+   8. フロアタブ
+   ========================================================================== */
+document.getElementById('floorTabs').addEventListener('click', (e) => {
+  const btn = e.target.closest('.floor-tab');
+  if (!btn) return;
+  loadFloor(btn.dataset.floor);
+});
+
+/* ==========================================================================
+   9. ピンチズーム／パン（スマホ最優先の簡易実装）
+   ========================================================================== */
+const viewport = document.getElementById('mapViewport');
+const stageEl = document.getElementById('mapStage');
+let scale = 1, panX = 0, panY = 0;
+let minScale = 1, maxScale = 4;
+const NATIVE_W = 1300, NATIVE_H = 800;
+
+function resetView(){
+  const vw = viewport.clientWidth, vh = viewport.clientHeight;
+  scale = Math.min(vw / NATIVE_W, vh / NATIVE_H);
+  minScale = scale;
+  panX = (vw - NATIVE_W * scale) / 2;
+  panY = (vh - NATIVE_H * scale) / 2;
+  applyTransform();
+}
+
+function clampPan(){
+  const vw = viewport.clientWidth, vh = viewport.clientHeight;
+  const contentW = NATIVE_W * scale, contentH = NATIVE_H * scale;
+  const minX = Math.min(0, vw - contentW);
+  const minY = Math.min(0, vh - contentH);
+  panX = Math.max(minX, Math.min(0, panX));
+  panY = Math.max(minY, Math.min(0, panY));
+  // コンテンツが画面より小さい方向はセンタリング
+  if (contentW < vw) panX = (vw - contentW) / 2;
+  if (contentH < vh) panY = (vh - contentH) / 2;
+}
+
+function applyTransform(){
+  clampPan();
+  stageEl.style.transform = `translate(${panX}px, ${panY}px) scale(${scale})`;
+}
+
+// --- ポインター管理 ---
+const pointers = new Map();
+let pinchStartDist = 0, pinchStartScale = 1;
+let panStart = null;
+
+viewport.addEventListener('pointerdown', (e) => {
+  viewport.setPointerCapture(e.pointerId);
+  pointers.set(e.pointerId, {x:e.clientX, y:e.clientY});
+  if (pointers.size === 1){
+    panStart = {x:e.clientX, y:e.clientY, panX, panY};
+  } else if (pointers.size === 2){
+    const pts = [...pointers.values()];
+    pinchStartDist = Math.hypot(pts[0].x-pts[1].x, pts[0].y-pts[1].y);
+    pinchStartScale = scale;
+  }
+});
+
+viewport.addEventListener('pointermove', (e) => {
+  if (!pointers.has(e.pointerId)) return;
+  pointers.set(e.pointerId, {x:e.clientX, y:e.clientY});
+
+  if (pointers.size === 1 && panStart){
+    panX = panStart.panX + (e.clientX - panStart.x);
+    panY = panStart.panY + (e.clientY - panStart.y);
+    applyTransform();
+  } else if (pointers.size === 2){
+    const pts = [...pointers.values()];
+    const dist = Math.hypot(pts[0].x-pts[1].x, pts[0].y-pts[1].y);
+    if (pinchStartDist > 0){
+      const midX = (pts[0].x+pts[1].x)/2, midY = (pts[0].y+pts[1].y)/2;
+      const rect = viewport.getBoundingClientRect();
+      const localX = midX - rect.left, localY = midY - rect.top;
+      const newScale = Math.max(minScale, Math.min(maxScale, pinchStartScale * (dist / pinchStartDist)));
+      // ピンチ中心を軸に拡大縮小
+      const contentX = (localX - panX) / scale;
+      const contentY = (localY - panY) / scale;
+      scale = newScale;
+      panX = localX - contentX * scale;
+      panY = localY - contentY * scale;
+      applyTransform();
+    }
+  }
+});
+
+function endPointer(e){
+  pointers.delete(e.pointerId);
+  if (pointers.size < 2) pinchStartDist = 0;
+  if (pointers.size === 0) panStart = null;
+}
+viewport.addEventListener('pointerup', endPointer);
+viewport.addEventListener('pointercancel', endPointer);
+
+// マウスホイールでもズームできるように（PC確認用）
+viewport.addEventListener('wheel', (e) => {
+  e.preventDefault();
+  const rect = viewport.getBoundingClientRect();
+  const localX = e.clientX - rect.left, localY = e.clientY - rect.top;
+  const factor = e.deltaY < 0 ? 1.12 : 0.9;
+  const newScale = Math.max(minScale, Math.min(maxScale, scale * factor));
+  const contentX = (localX - panX) / scale;
+  const contentY = (localY - panY) / scale;
+  scale = newScale;
+  panX = localX - contentX * scale;
+  panY = localY - contentY * scale;
+  applyTransform();
+}, { passive:false });
+
+window.addEventListener('resize', () => { if (currentFloor) resetView(); });
+
+/* ==========================================================================
+   10. スケジュールモーダル（1日目/2日目タブ + 現在時刻ライブインジケーター）
+   ========================================================================== */
+let currentSchedDay = 1;
+document.getElementById('scheduleOpenBtn').addEventListener('click', () => {
+  renderSchedule();
+  document.getElementById('scheduleOverlay').classList.add('show');
+});
+document.querySelectorAll('.sched-tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.sched-tab').forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+    currentSchedDay = Number(tab.dataset.day);
+    renderSchedule();
+  });
+});
+
+function renderSchedule(){
+  const grid = document.getElementById('schedGrid');
+  const items = SCHEDULE_DATA[currentSchedDay] || [];
+  grid.innerHTML = items.map(it => `
+    <div class="sched-row">
+      <span class="sched-time">${it.time}</span>
+      <span>${escapeHTML(it.label)}</span>
+    </div>
+  `).join('');
+  updateLiveLine();
+}
+
+function updateLiveLine(){
+  const grid = document.getElementById('schedGrid');
+  const old = grid.querySelector('.sched-live-line');
+  if (old) old.remove();
+  const oldLabel = grid.querySelector('.sched-live-label');
+  if (oldLabel) oldLabel.remove();
+
+  const items = SCHEDULE_DATA[currentSchedDay] || [];
+  if (items.length === 0) return;
+  const now = new Date();
+  const nowMin = now.getHours() * 60 + now.getMinutes();
+
+  const toMin = t => { const [h,m] = t.split(':').map(Number); return h*60+m; };
+  const first = toMin(items[0].time);
+  const last = toMin(items[items.length-1].time) + 60; // 最終項目のあと1時間分を余白として確保
+  if (nowMin < first || nowMin > last) return; // 時程の範囲外なら表示しない
+
+  const rowH = grid.scrollHeight / items.length; // 簡易的な按分（行数ベース）
+  const ratio = (nowMin - first) / (last - first);
+  const top = ratio * grid.scrollHeight;
+
+  const line = document.createElement('div');
+  line.className = 'sched-live-line';
+  line.style.top = top + 'px';
+  const label = document.createElement('div');
+  label.className = 'sched-live-label';
+  label.style.top = top + 'px';
+  label.textContent = 'NOW ' + now.toTimeString().slice(0,5);
+  grid.style.position = 'relative';
+  grid.appendChild(line);
+  grid.appendChild(label);
+}
+setInterval(() => { if (document.getElementById('scheduleOverlay').classList.contains('show')) updateLiveLine(); }, 30000);
+
+/* ==========================================================================
+   初期化
+   ========================================================================== */
+loadFloor('2F');
+</script>
+</body>
+</html>

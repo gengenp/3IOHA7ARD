@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+<meta name="robots" content="noindex">
 <title>PROJECT: 3IOHA7ARD</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -569,13 +570,36 @@ table.rank-table td.sc{ color:var(--bone); }
   background:var(--panel);
   position:relative;
 }
-.map-frame::after{
-  content:"CONTAINMENT MAP // SECTOR-7";
-  position:absolute; top:1rem; left:1rem;
-  font-family:var(--font-mono); font-size:.6rem; letter-spacing:.15em;
-  color:var(--red); background:rgba(5,4,3,.7); padding:.2rem .5rem;
+.map-floor-badge{
+  position:absolute; top:.9rem; left:.9rem; z-index:5;
+  font-family:var(--font-display); font-weight:900; font-size:1.6rem;
+  color:var(--void); background:var(--green);
+  padding:.15rem .6rem; letter-spacing:.02em;
+  box-shadow:0 0 0 1px var(--green-dim);
 }
-.map-frame img{ filter:grayscale(1) contrast(1.15) sepia(.15); width:100%; }
+.mini-map-stage{
+  width:100%; overflow:hidden; background:#0d0908;
+}
+.mini-map-stage svg{ display:block; width:100%; height:auto; }
+.mini-map-stage svg rect:not([id]){ fill:#0d0908; }
+.mini-map-stage .mm-room{ fill:#241616; stroke:var(--line); }
+.mini-map-stage .mm-room.mm-target{
+  fill:var(--red); stroke:var(--red-glow);
+  animation:mmPulse 1.6s ease-in-out infinite;
+}
+@keyframes mmPulse{
+  0%,100%{ filter:brightness(1); } 50%{ filter:brightness(1.5); }
+}
+.mini-map-stage .mm-hide{ display:none; }
+.mini-map-loading{
+  padding:2.5rem 1rem; text-align:center; font-size:.75rem; color:var(--bone-dim);
+}
+.mini-map-btn{
+  display:block; margin-top:.7rem; text-align:center;
+  font-family:var(--font-mono); font-size:.72rem; letter-spacing:.05em;
+  color:var(--green); border:1px solid var(--green-dim); padding:.7rem;
+}
+.mini-map-btn:active{ background:var(--green); color:var(--void); }
 
 .access-info dl{
   display:grid; grid-template-columns:auto 1fr; gap:.8rem 1.5rem;
@@ -642,8 +666,8 @@ a:focus-visible, button:focus-visible{
   <section class="hero">
     <div class="warning-strip" aria-hidden="true">
       <div class="track">
-        <span>⚠ WARNING: INFECTED ZONE</span><span>⚠ DO NOT ENTER WITHOUT AUTHORIZATION</span><span>⚠ 3IOHA7ARD LEVEL 4</span>
-        <span>⚠ WARNING: INFECTED ZONE</span><span>⚠ DO NOT ENTER WITHOUT AUTHORIZATION</span><span>⚠ 3IOHA7ARD LEVEL 4</span>
+        <span>⚠ WARNING: INFECTED ZONE</span><span>⚠ DO NOT ENTER WITHOUT AUTHORIZATION</span><span>⚠ BIOHAZARD LEVEL 4</span>
+        <span>⚠ WARNING: INFECTED ZONE</span><span>⚠ DO NOT ENTER WITHOUT AUTHORIZATION</span><span>⚠ BIOHAZARD LEVEL 4</span>
       </div>
     </div>
 
@@ -786,13 +810,13 @@ a:focus-visible, button:focus-visible{
 
       <div class="mission-layout">
         <div class="mission-log">
-          <p><strong>状況報告 —</strong> 20XX年、文化祭当日。校舎地下研究室から流出した未知のウイルスが、校内の一部エリアを汚染した。</p>
+          <p><strong>状況報告 —</strong> 20XX年、文化祭当日。校舎地下研究室から流出した未知のウイルス「Zウイルス」が、校内の一部エリアを汚染した。</p>
           <p>感染者（ゾンビ）は既に徘徊を開始している。生存者救出チームとして、あなたは限られた弾薬でエリア内を突破しなければならない。</p>
           <p><strong>目標 —</strong> 制限時間内にすべての感染体を無力化し、脱出ポイントまで到達すること。スコアは撃破数・命中精度・残り時間から算出される。</p>
         </div>
 
         <ul class="rules-list">
-          <li><span class="tag">RULE</span> 1人〜2人でチーム編成が可能。所要時間は約5分。</li>
+          <li><span class="tag">RULE</span> 1人〜4人でチーム編成が可能。所要時間は約5分。</li>
           <li><span class="tag">RULE</span> 専用ガンコントローラーでゾンビをシューティング。</li>
           <li><span class="tag">RULE</span> スコアはプレイ終了後に即時ランキングへ反映されます。</li>
           <li><span class="tag warn">注意</span> 小学生以下は保護者同伴でのご参加をお願いします。</li>
@@ -815,7 +839,9 @@ a:focus-visible, button:focus-visible{
 
       <div class="access-layout">
         <div class="map-frame">
-          <img src="https://placehold.co/640x420/0b0908/8a7f72?text=SCHOOL+MAP+%28DUMMY%29" alt="校内マップ（ダミー画像）会場は3号館2階 2-A教室">
+          <span class="map-floor-badge">2F</span>
+          <div class="mini-map-stage" id="miniMapStage"><div class="mini-map-loading">MAP読込中…</div></div>
+          <a href="map.html" class="mini-map-btn">全フロア・全アトラクションのマップを見る →</a>
         </div>
 
         <div class="access-info">
@@ -1020,16 +1046,16 @@ async function loadRanking(){
     if(rows.length === 0) throw new Error("シートにデータがありません");
     renderRanking(rows);
   }catch(err){
-    console.warn("[3IOHA7ARD] ランキング取得エラー:", err.message);
+    console.warn("[Z-INFECTION] ランキング取得エラー:", err.message);
     // デモ用のサンプルデータで表示（未設定・取得失敗時のプレビュー用）
     renderRanking([
-      { name: "デモ1", score: "12500" },
-      { name: "デモ2", score: "9800" },
-      { name: "デモ3", score: "8600" },
-      { name: "デモ4", score: "7200" },
-      { name: "デモ5", score: "6100" },
-      { name: "デモ6", score: "4300" },
-      { name: "デモ7", score: "334" },
+      { name: "ゾンビハンターK", score: "12500" },
+      { name: "サバイバー疾風", score: "9800" },
+      { name: "名もなき衛生兵", score: "8600" },
+      { name: "夜行のライフル手", score: "7200" },
+      { name: "隔離区域の亡霊", score: "6100" },
+      { name: "見習い救助隊", score: "4300" },
+      { name: "新人パトロール", score: "2100" },
     ]);
   }
 }
@@ -1065,9 +1091,9 @@ async function loadLiveChallenger(){
     stageEl.textContent = "STAGE: " + (stage || "--");
     timeEl.textContent = time || "--:--:--";
   }catch(err){
-    console.warn("[3IOHA7ARD] LIVEチャレンジャー取得エラー:", err.message);
+    console.warn("[Z-INFECTION] LIVEチャレンジャー取得エラー:", err.message);
     // デモ用サンプル値（未設定・取得失敗時のプレビュー用）
-    nameEl.textContent = "デモ";
+    nameEl.textContent = "ゾンビハンターK";
     scoreEl.innerHTML = `3,200<span class="unit">pt</span>`;
     stageEl.textContent = "STAGE: UNO1";
     timeEl.textContent = "デモ表示";
@@ -1095,7 +1121,7 @@ async function loadWaitingStatus(){
     const latest = rows[rows.length - 1];
     applyWaitingStatus(Number(latest.waiting_time) || 0, latest.status || "受付中");
   }catch(err){
-    console.warn("[3IOHA7ARD] 待ち時間取得エラー:", err.message);
+    console.warn("[Z-INFECTION] 待ち時間取得エラー:", err.message);
     // デモ用サンプル値
     applyWaitingStatus(45, "配布中");
   }
@@ -1109,11 +1135,70 @@ async function loadWaitingStatus(){
 }
 
 /* ==========================================================================
+   入口マップ（ACCESS内のミニマップ）
+   2Fフロア図を、3-1〜3-8の並び（教室の行）だけ切り抜いて表示し、
+   3-7だけ赤くハイライト、他の教室はグレーアウトする。
+   ※ map.htmlと同じく、Figmaの壊れたid（数値文字参照でのUTF-8バイト化け）を
+     正しく復元するため、fetch + DOMParser(image/svg+xml) を必ず使う。
+   ========================================================================== */
+function decodeMojibakeIdMini(str){
+  const bytes = [];
+  for (const ch of str){
+    const code = ch.codePointAt(0);
+    if (code < 256){
+      bytes.push(code);
+    } else {
+      bytes.push(...new TextEncoder().encode(ch));
+    }
+  }
+  return new TextDecoder('utf-8').decode(new Uint8Array(bytes));
+}
+
+async function loadMiniMap(){
+  const stage = document.getElementById('miniMapStage');
+  try{
+    const res = await fetch('assets/floors/2F.svg');
+    if(!res.ok) throw new Error('2F.svgの取得に失敗: ' + res.status);
+    const text = await res.text();
+    const doc = new DOMParser().parseFromString(text, 'image/svg+xml');
+    const svg = doc.documentElement;
+
+    // 3-1〜3-8が並ぶ行だけを切り抜く（座標はFigmaの図面から実測）
+    svg.setAttribute('viewBox', '50 470 1030 220');
+    svg.removeAttribute('width');
+    svg.removeAttribute('height');
+
+    // 教室以外（廊下・設備・準備室など）は非表示にして、教室の並びだけ見せる
+    ['rect','path','polygon','circle','ellipse'].forEach(tag => {
+      svg.querySelectorAll(tag + '[id]').forEach(el => {
+        const rawId = el.getAttribute('id');
+        if (/pattern|image|clip|path-/.test(rawId)) return;
+        const name = decodeMojibakeIdMini(rawId);
+        const isClassroom = /^3-\d$/.test(name);
+        if (isClassroom){
+          el.classList.add('mm-room');
+          if (name === '3-7') el.classList.add('mm-target');
+        } else {
+          el.classList.add('mm-hide');
+        }
+      });
+    });
+
+    stage.innerHTML = '';
+    stage.appendChild(svg);
+  }catch(err){
+    console.warn('[Z-INFECTION] ミニマップ取得エラー:', err.message);
+    stage.innerHTML = '<div class="mini-map-loading">マップを読み込めませんでした。<br>「全フロア・全アトラクションのマップを見る」からご確認ください。</div>';
+  }
+}
+
+/* ==========================================================================
    初期化
    ========================================================================== */
 loadLiveChallenger();
 loadRanking();
 loadWaitingStatus();
+loadMiniMap();
 // LIVEチャレンジャーは1秒ごと、ランキングは3秒ごとに自動更新。待ち時間は5分ごと。
 setInterval(loadLiveChallenger, LIVE_POLL_INTERVAL_MS);
 setInterval(loadRanking, RANKING_POLL_INTERVAL_MS);
