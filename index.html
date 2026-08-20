@@ -582,6 +582,7 @@ table.rank-table td.sc{ color:var(--bone); }
 }
 .mini-map-stage svg{ display:block; width:100%; height:auto; }
 .mini-map-stage svg rect:not([id]){ fill:#0d0908; }
+.mini-map-stage .mm-passage{ fill:#150f0d; stroke:#241616; }
 .mini-map-stage .mm-room{ fill:#241616; stroke:var(--line); }
 .mini-map-stage .mm-room.mm-target{
   fill:var(--red); stroke:var(--red-glow);
@@ -590,7 +591,6 @@ table.rank-table td.sc{ color:var(--bone); }
 @keyframes mmPulse{
   0%,100%{ filter:brightness(1); } 50%{ filter:brightness(1.5); }
 }
-.mini-map-stage .mm-hide{ display:none; }
 .mini-map-loading{
   padding:2.5rem 1rem; text-align:center; font-size:.75rem; color:var(--bone-dim);
 }
@@ -1163,23 +1163,22 @@ async function loadMiniMap(){
     const doc = new DOMParser().parseFromString(text, 'image/svg+xml');
     const svg = doc.documentElement;
 
-    // 3-1〜3-8が並ぶ行だけを切り抜く（座標はFigmaの図面から実測）
-    svg.setAttribute('viewBox', '50 470 1030 220');
+    // 二階全体を表示する（元のviewBoxをそのまま使用）
     svg.removeAttribute('width');
     svg.removeAttribute('height');
 
-    // 教室以外（廊下・設備・準備室など）は非表示にして、教室の並びだけ見せる
+    // 全ての部屋を薄いグレーで表示し、3-7だけ赤くハイライトする
     ['rect','path','polygon','circle','ellipse'].forEach(tag => {
       svg.querySelectorAll(tag + '[id]').forEach(el => {
         const rawId = el.getAttribute('id');
         if (/pattern|image|clip|path-/.test(rawId)) return;
         const name = decodeMojibakeIdMini(rawId);
-        const isClassroom = /^3-\d$/.test(name);
-        if (isClassroom){
+        const prefix = name.charAt(0);
+        if (prefix === 'b' || prefix === 'e' || prefix === 'd'){
+          el.classList.add('mm-passage'); // 通路・設備は控えめな表示
+        } else {
           el.classList.add('mm-room');
           if (name === '3-7') el.classList.add('mm-target');
-        } else {
-          el.classList.add('mm-hide');
         }
       });
     });
