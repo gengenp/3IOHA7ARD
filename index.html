@@ -578,10 +578,10 @@ table.rank-table td.sc{ color:var(--bone); }
   box-shadow:0 0 0 1px var(--green-dim);
 }
 .mini-map-stage{
-  width:100%; overflow:hidden; background:#0d0908;
+  width:100%; overflow:hidden; background:#ffffff;
 }
 .mini-map-stage svg{ display:block; width:100%; height:auto; }
-.mini-map-stage svg rect:not([id]){ fill:#0d0908; }
+.mini-map-stage svg rect:not([id]){ fill:#ffffff; }
 /* map.htmlと同じ配色（Okabe-Itoのカラーユニバーサルデザイン）に統一 */
 .mini-map-stage .mm-corridor{ fill:#e4e4e4; stroke:#7a7a7a; stroke-width:2.5px; }
 .mini-map-stage .mm-equip{ stroke:#5a5a5a; stroke-width:2.5px; } /* fillは上書きしない＝埋め込み画像をそのまま表示 */
@@ -1183,10 +1183,21 @@ async function loadMiniMap(){
     svg.removeAttribute('width');
     svg.removeAttribute('height');
 
+    // 重要: getBBox()は要素が実際にドキュメントへ描画された後でないと正しい値を返さない。
+    // そのため、色分け・ラベル付けより先に必ずDOMへ挿入する。
+    stage.innerHTML = '';
+    stage.appendChild(svg);
+
+    // 例外設定
+    // ・アトラクションが無いことが判明した部屋は、bグループ同様クリック不可の通路扱いにする
+    const FORCE_CORRIDOR_NAMES = new Set(['２F中央渡り廊下']);
+    // ・通常のルール（正方形以上に横長）に当てはまらなくても、名前を表示したい部屋
+    const FORCE_LABEL_NAMES = new Set(['作法室', 'b昇降口']);
+    const FLOOR_WRAPPER_NAMES = new Set(['一階','二階','三階','四階']);
+
     // 部屋の種類ごとに色分け（map.htmlと同じ4分類）。3-7だけハイライト。
     // 正方形または横長の部屋（b/d/e以外）には中央に部屋名を表示する。
     // 単純な図形だけでなく、複数pathをまとめた<g id="...">の部屋（例：中央渡り廊下）にも対応。
-    const FLOOR_WRAPPER_NAMES = new Set(['一階','二階','三階','四階']);
     ['rect','path','polygon','circle','ellipse','g'].forEach(tag => {
       svg.querySelectorAll(tag + '[id]').forEach(el => {
         const rawId = el.getAttribute('id');
@@ -1196,7 +1207,8 @@ async function loadMiniMap(){
         const prefix = name.charAt(0);
 
         let kind;
-        if (prefix === 'b' || prefix === 'e') kind = 'corridor';
+        if (FORCE_CORRIDOR_NAMES.has(name)) kind = 'corridor';
+        else if (prefix === 'b' || prefix === 'e') kind = 'corridor';
         else if (prefix === 'd') kind = 'equip';
         else if (prefix === 'c') kind = 'unused';
         else kind = 'room';
@@ -1210,25 +1222,22 @@ async function loadMiniMap(){
           });
         }
 
-        if (kind === 'room' || kind === 'unused'){
-          let bbox;
-          try { bbox = el.getBBox(); } catch(e){ bbox = {x:0,y:0,width:0,height:0}; }
-          if (bbox.width >= bbox.height && bbox.width > 0){
-            const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-            label.setAttribute('x', bbox.x + bbox.width/2);
-            label.setAttribute('y', bbox.y + bbox.height/2);
-            label.setAttribute('class', 'mm-label');
-            const fontSize = Math.max(11, Math.min(18, bbox.height * 0.28));
-            label.setAttribute('font-size', fontSize);
-            label.textContent = kind === 'unused' ? name.slice(1) : name;
-            (el.tagName === 'g' ? el : el.parentNode).appendChild(label);
-          }
+        let bbox;
+        try { bbox = el.getBBox(); } catch(e){ bbox = {x:0,y:0,width:0,height:0}; }
+        const shouldLabel = FORCE_LABEL_NAMES.has(name) ||
+          ((kind === 'room' || kind === 'unused') && bbox.width >= bbox.height && bbox.width > 0);
+        if (shouldLabel && bbox.width > 0){
+          const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+          label.setAttribute('x', bbox.x + bbox.width/2);
+          label.setAttribute('y', bbox.y + bbox.height/2);
+          label.setAttribute('class', 'mm-label');
+          const fontSize = Math.max(11, Math.min(18, bbox.height * 0.28));
+          label.setAttribute('font-size', fontSize);
+          label.textContent = ['b','c','d','e'].includes(name.charAt(0)) ? name.slice(1) : name;
+          (el.tagName === 'g' ? el : el.parentNode).appendChild(label);
         }
       });
     });
-
-    stage.innerHTML = '';
-    stage.appendChild(svg);
   }catch(err){
     console.warn('[Z-INFECTION] ミニマップ取得エラー:', err.message);
     stage.innerHTML = '<div class="mini-map-loading">マップを読み込めませんでした。<br>「全フロア・全アトラクションのマップを見る」からご確認ください。</div>';

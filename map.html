@@ -370,6 +370,11 @@ async function loadFloor(floorKey){
 
   // 「フロア全体を包む最外周のg」は除外する（一階/二階/三階/四階というidが付いている）
   const FLOOR_WRAPPER_NAMES = new Set(['一階','二階','三階','四階']);
+  // 例外設定
+  // ・アトラクションが無いことが判明した部屋は、bグループ同様クリック不可の通路扱いにする
+  const FORCE_CORRIDOR_NAMES = new Set(['２F中央渡り廊下']);
+  // ・通常のルール（正方形以上に横長）に当てはまらなくても、名前を表示したい部屋
+  const FORCE_LABEL_NAMES = new Set(['作法室', 'b昇降口']);
 
   // クリック判定対象を洗い出してスタイル・イベントを付与
   // 単純な図形（rect/path等）だけでなく、複数のpathをまとめた<g id="...">の部屋
@@ -383,7 +388,7 @@ async function loadFloor(floorKey){
       const name = decodeMojibakeId(rawId);
       if (tag === 'g' && FLOOR_WRAPPER_NAMES.has(name)) return; // フロア全体のラッパーは対象外
 
-      const kind = classify(name);
+      const kind = FORCE_CORRIDOR_NAMES.has(name) ? 'corridor' : classify(name);
       el.classList.add('room-' + kind);
       // <g>の場合、子要素が独自のfill属性を持っているため、
       // 子の図形すべてにも同じクラスを付けて塗りつぶし色を確実に上書きする。
@@ -393,9 +398,10 @@ async function loadFloor(floorKey){
         });
       }
 
+      let bbox;
+      try { bbox = el.getBBox(); } catch(e){ bbox = {x:0,y:0,width:0,height:0}; }
+
       if (kind === 'attraction' || kind === 'unused'){
-        let bbox;
-        try { bbox = el.getBBox(); } catch(e){ bbox = {x:0,y:0,width:0,height:0}; }
         const cx = bbox.x + bbox.width/2;
         const cy = bbox.y + bbox.height/2;
         clickableEls.push({ el, name, kind, cx, cy });
@@ -403,17 +409,19 @@ async function loadFloor(floorKey){
           ev.stopPropagation();
           openRoom(name, kind, el);
         });
-        // 正方形または横長の部屋は、中央に部屋名を表示する
-        if (bbox.width >= bbox.height && bbox.width > 0){
-          const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-          label.setAttribute('x', cx);
-          label.setAttribute('y', cy);
-          label.setAttribute('class', 'room-label');
-          const fontSize = Math.max(11, Math.min(18, bbox.height * 0.28));
-          label.setAttribute('font-size', fontSize);
-          label.textContent = kind === 'unused' ? name.slice(1) : name;
-          (el.tagName === 'g' ? el : el.parentNode).appendChild(label);
-        }
+      }
+
+      // 正方形または横長の部屋は、中央に部屋名を表示する（例外指定の部屋は形に関わらず表示）
+      const shouldLabel = FORCE_LABEL_NAMES.has(name) || (bbox.width >= bbox.height && bbox.width > 0);
+      if (shouldLabel && bbox.width > 0){
+        const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        label.setAttribute('x', bbox.x + bbox.width/2);
+        label.setAttribute('y', bbox.y + bbox.height/2);
+        label.setAttribute('class', 'room-label');
+        const fontSize = Math.max(11, Math.min(18, bbox.height * 0.28));
+        label.setAttribute('font-size', fontSize);
+        label.textContent = ['b','c','d','e'].includes(name.charAt(0)) ? name.slice(1) : name;
+        (el.tagName === 'g' ? el : el.parentNode).appendChild(label);
       }
     });
   });
@@ -481,10 +489,14 @@ function escapeHTML(str){
   return String(str).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 }
 
-document.querySelectorAll('[data-close]').forEach(btn => {
-  btn.addEventListener('click', () => {
+// data-close属性を持つボタンは、あとから innerHTML で動的に追加されるものも多い
+// （openRoom()内で毎回生成される「閉じる」ボタンなど）ため、
+// ページ読み込み時に一度だけbindするのではなく、documentに対するイベント委任にする。
+document.addEventListener('click', (e) => {
+  const btn = e.target.closest('[data-close]');
+  if (btn){
     document.getElementById(btn.dataset.close).classList.remove('show');
-  });
+  }
 });
 document.querySelectorAll('.overlay').forEach(ov => {
   ov.addEventListener('click', (e) => { if (e.target === ov) ov.classList.remove('show'); });
