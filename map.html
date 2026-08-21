@@ -368,16 +368,31 @@ async function loadFloor(floorKey){
   const svgClone = svgEl.cloneNode(true);
   stage.appendChild(svgClone);
 
+  // 「フロア全体を包む最外周のg」は除外する（一階/二階/三階/四階というidが付いている）
+  const FLOOR_WRAPPER_NAMES = new Set(['一階','二階','三階','四階']);
+
   // クリック判定対象を洗い出してスタイル・イベントを付与
+  // 単純な図形（rect/path等）だけでなく、複数のpathをまとめた<g id="...">の部屋
+  // （例：マスクで縁取りを表現している通路など）にも対応する。
   clickableEls = [];
-  const shapeTags = ['rect','path','polygon','circle','ellipse'];
+  const shapeTags = ['rect','path','polygon','circle','ellipse','g'];
   shapeTags.forEach(tag => {
     svgClone.querySelectorAll(tag + '[id]').forEach(el => {
       const rawId = el.getAttribute('id');
       if (/pattern|image|clip|path-/.test(rawId)) return;
       const name = decodeMojibakeId(rawId);
+      if (tag === 'g' && FLOOR_WRAPPER_NAMES.has(name)) return; // フロア全体のラッパーは対象外
+
       const kind = classify(name);
       el.classList.add('room-' + kind);
+      // <g>の場合、子要素が独自のfill属性を持っているため、
+      // 子の図形すべてにも同じクラスを付けて塗りつぶし色を確実に上書きする。
+      if (tag === 'g'){
+        el.querySelectorAll('rect,path,polygon,circle,ellipse').forEach(child => {
+          child.classList.add('room-' + kind);
+        });
+      }
+
       if (kind === 'attraction' || kind === 'unused'){
         let bbox;
         try { bbox = el.getBBox(); } catch(e){ bbox = {x:0,y:0,width:0,height:0}; }
@@ -397,7 +412,7 @@ async function loadFloor(floorKey){
           const fontSize = Math.max(11, Math.min(18, bbox.height * 0.28));
           label.setAttribute('font-size', fontSize);
           label.textContent = kind === 'unused' ? name.slice(1) : name;
-          el.parentNode.appendChild(label);
+          (el.tagName === 'g' ? el : el.parentNode).appendChild(label);
         }
       }
     });

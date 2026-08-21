@@ -1185,11 +1185,14 @@ async function loadMiniMap(){
 
     // 部屋の種類ごとに色分け（map.htmlと同じ4分類）。3-7だけハイライト。
     // 正方形または横長の部屋（b/d/e以外）には中央に部屋名を表示する。
-    ['rect','path','polygon','circle','ellipse'].forEach(tag => {
+    // 単純な図形だけでなく、複数pathをまとめた<g id="...">の部屋（例：中央渡り廊下）にも対応。
+    const FLOOR_WRAPPER_NAMES = new Set(['一階','二階','三階','四階']);
+    ['rect','path','polygon','circle','ellipse','g'].forEach(tag => {
       svg.querySelectorAll(tag + '[id]').forEach(el => {
         const rawId = el.getAttribute('id');
         if (/pattern|image|clip|path-/.test(rawId)) return;
         const name = decodeMojibakeIdMini(rawId);
+        if (tag === 'g' && FLOOR_WRAPPER_NAMES.has(name)) return; // フロア全体のラッパーは対象外
         const prefix = name.charAt(0);
 
         let kind;
@@ -1199,6 +1202,13 @@ async function loadMiniMap(){
         else kind = 'room';
         el.classList.add('mm-' + kind);
         if (name === '3-7') el.classList.add('mm-target');
+        // <g>の子要素は独自のfill属性を持つため、同じクラスを付けて確実に上書きする
+        if (tag === 'g'){
+          el.querySelectorAll('rect,path,polygon,circle,ellipse').forEach(child => {
+            child.classList.add('mm-' + kind);
+            if (name === '3-7') child.classList.add('mm-target');
+          });
+        }
 
         if (kind === 'room' || kind === 'unused'){
           let bbox;
@@ -1211,7 +1221,7 @@ async function loadMiniMap(){
             const fontSize = Math.max(11, Math.min(18, bbox.height * 0.28));
             label.setAttribute('font-size', fontSize);
             label.textContent = kind === 'unused' ? name.slice(1) : name;
-            el.parentNode.appendChild(label);
+            (el.tagName === 'g' ? el : el.parentNode).appendChild(label);
           }
         }
       });
