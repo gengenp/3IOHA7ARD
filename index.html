@@ -582,14 +582,30 @@ table.rank-table td.sc{ color:var(--bone); }
 }
 .mini-map-stage svg{ display:block; width:100%; height:auto; }
 .mini-map-stage svg rect:not([id]){ fill:#0d0908; }
-.mini-map-stage .mm-passage{ fill:#150f0d; stroke:#241616; }
-.mini-map-stage .mm-room{ fill:#241616; stroke:var(--line); }
-.mini-map-stage .mm-room.mm-target{
-  fill:var(--red); stroke:var(--red-glow);
+/* map.htmlと同じ配色（Okabe-Itoのカラーユニバーサルデザイン）に統一 */
+.mini-map-stage .mm-corridor{ fill:#e4e4e4; stroke:#7a7a7a; stroke-width:2.5px; }
+.mini-map-stage .mm-equip{ stroke:#5a5a5a; stroke-width:2.5px; } /* fillは上書きしない＝埋め込み画像をそのまま表示 */
+.mini-map-stage .mm-room{ fill:#d3e8f7; stroke:#0072b2; stroke-width:3px; } /* アトラクション（青） */
+.mini-map-stage .mm-unused{ fill:#fde8c8; stroke:#b26b00; stroke-width:3px; } /* 未使用（オレンジ） */
+.mini-map-stage .mm-room.mm-target,
+.mini-map-stage .mm-unused.mm-target{
+  fill:#f6d2c2; stroke:#d55e00; stroke-width:3.5px;
   animation:mmPulse 1.6s ease-in-out infinite;
 }
 @keyframes mmPulse{
-  0%,100%{ filter:brightness(1); } 50%{ filter:brightness(1.5); }
+  0%,100%{ filter:brightness(1); } 50%{ filter:brightness(1.4); }
+}
+.mini-map-stage .mm-label{
+  font-family:var(--font-mono);
+  font-weight:700;
+  fill:#1f2328 !important;
+  text-anchor:middle;
+  dominant-baseline:middle;
+  pointer-events:none;
+  paint-order:stroke;
+  stroke:#ffffff;
+  stroke-width:3px;
+  stroke-linejoin:round;
 }
 .mini-map-loading{
   padding:2.5rem 1rem; text-align:center; font-size:.75rem; color:var(--bone-dim);
@@ -666,8 +682,8 @@ a:focus-visible, button:focus-visible{
   <section class="hero">
     <div class="warning-strip" aria-hidden="true">
       <div class="track">
-        <span>⚠ WARNING: INFECTED ZONE</span><span>⚠ DO NOT ENTER WITHOUT AUTHORIZATION</span><span>⚠ 3IOHA7ARD LEVEL 4</span>
-        <span>⚠ WARNING: INFECTED ZONE</span><span>⚠ DO NOT ENTER WITHOUT AUTHORIZATION</span><span>⚠ 3IOHA7ARD LEVEL 4</span>
+        <span>⚠ WARNING: INFECTED ZONE</span><span>⚠ DO NOT ENTER WITHOUT AUTHORIZATION</span><span>⚠ BIOHAZARD LEVEL 4</span>
+        <span>⚠ WARNING: INFECTED ZONE</span><span>⚠ DO NOT ENTER WITHOUT AUTHORIZATION</span><span>⚠ BIOHAZARD LEVEL 4</span>
       </div>
     </div>
 
@@ -1046,7 +1062,7 @@ async function loadRanking(){
     if(rows.length === 0) throw new Error("シートにデータがありません");
     renderRanking(rows);
   }catch(err){
-    console.warn("[3IOHA7ARD] ランキング取得エラー:", err.message);
+    console.warn("[Z-INFECTION] ランキング取得エラー:", err.message);
     // デモ用のサンプルデータで表示（未設定・取得失敗時のプレビュー用）
     renderRanking([
       { name: "ゾンビハンターK", score: "12500" },
@@ -1121,7 +1137,7 @@ async function loadWaitingStatus(){
     const latest = rows[rows.length - 1];
     applyWaitingStatus(Number(latest.waiting_time) || 0, latest.status || "受付中");
   }catch(err){
-    console.warn("[3IOHA7ARD] 待ち時間取得エラー:", err.message);
+    console.warn("[Z-INFECTION] 待ち時間取得エラー:", err.message);
     // デモ用サンプル値
     applyWaitingStatus(45, "配布中");
   }
@@ -1167,18 +1183,36 @@ async function loadMiniMap(){
     svg.removeAttribute('width');
     svg.removeAttribute('height');
 
-    // 全ての部屋を薄いグレーで表示し、3-7だけ赤くハイライトする
+    // 部屋の種類ごとに色分け（map.htmlと同じ4分類）。3-7だけハイライト。
+    // 正方形または横長の部屋（b/d/e以外）には中央に部屋名を表示する。
     ['rect','path','polygon','circle','ellipse'].forEach(tag => {
       svg.querySelectorAll(tag + '[id]').forEach(el => {
         const rawId = el.getAttribute('id');
         if (/pattern|image|clip|path-/.test(rawId)) return;
         const name = decodeMojibakeIdMini(rawId);
         const prefix = name.charAt(0);
-        if (prefix === 'b' || prefix === 'e' || prefix === 'd'){
-          el.classList.add('mm-passage'); // 通路・設備は控えめな表示
-        } else {
-          el.classList.add('mm-room');
-          if (name === '3-7') el.classList.add('mm-target');
+
+        let kind;
+        if (prefix === 'b' || prefix === 'e') kind = 'corridor';
+        else if (prefix === 'd') kind = 'equip';
+        else if (prefix === 'c') kind = 'unused';
+        else kind = 'room';
+        el.classList.add('mm-' + kind);
+        if (name === '3-7') el.classList.add('mm-target');
+
+        if (kind === 'room' || kind === 'unused'){
+          let bbox;
+          try { bbox = el.getBBox(); } catch(e){ bbox = {x:0,y:0,width:0,height:0}; }
+          if (bbox.width >= bbox.height && bbox.width > 0){
+            const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+            label.setAttribute('x', bbox.x + bbox.width/2);
+            label.setAttribute('y', bbox.y + bbox.height/2);
+            label.setAttribute('class', 'mm-label');
+            const fontSize = Math.max(11, Math.min(18, bbox.height * 0.28));
+            label.setAttribute('font-size', fontSize);
+            label.textContent = kind === 'unused' ? name.slice(1) : name;
+            el.parentNode.appendChild(label);
+          }
         }
       });
     });
@@ -1186,7 +1220,7 @@ async function loadMiniMap(){
     stage.innerHTML = '';
     stage.appendChild(svg);
   }catch(err){
-    console.warn('[3IOHA7ARD] ミニマップ取得エラー:', err.message);
+    console.warn('[Z-INFECTION] ミニマップ取得エラー:', err.message);
     stage.innerHTML = '<div class="mini-map-loading">マップを読み込めませんでした。<br>「全フロア・全アトラクションのマップを見る」からご確認ください。</div>';
   }
 }

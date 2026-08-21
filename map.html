@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
 <meta name="robots" content="noindex">
-<title>構内マップ</title>
+<title>構内マップ | PROJECT: Z-INFECTION</title>
 <style>
 /* ==========================================================================
    構内マップ（フルページ版）— ホワイトベースのシンプルなUI
@@ -21,13 +21,21 @@
   --border:      #e2e5ea;
   --ink:         #1f2328;
   --ink-dim:     #6b7280;
-  --accent:      #2f6fed;
-  --accent-soft: #e8f0fe;
-  --unused:      #e9eaec;
-  --unused-border: #cdd1d6;
   --danger:      #e5484d;
   --warn:        #f5a524;
   --font: -apple-system, BlinkMacSystemFont, "Segoe UI", "Hiragino Kaku Gothic ProN", "Noto Sans JP", sans-serif;
+
+  /* 部屋の色分け（Okabe-Itoのカラーユニバーサルデザイン配色を採用） */
+  --room-corridor-fill:   #e4e4e4;
+  --room-corridor-stroke: #7a7a7a;
+  --room-unused-fill:     #fde8c8;
+  --room-unused-stroke:   #b26b00; /* orange */
+  --room-attraction-fill: #d3e8f7;
+  --room-attraction-stroke:#0072b2; /* blue */
+  --room-target-fill:     #f6d2c2;
+  --room-target-stroke:   #d55e00; /* vermillion */
+  --accent: var(--room-attraction-stroke);
+  --accent-soft: var(--room-attraction-fill);
 }
 *{ box-sizing:border-box; margin:0; padding:0; }
 html,body{ overflow-x:hidden; max-width:100%; }
@@ -99,15 +107,28 @@ header::-webkit-scrollbar{ display:none; }
 .map-stage svg{ display:block; }
 
 /* room fills, driven by prefix classification (JS adds these classes) */
-.room-corridor{ fill:#f4f5f6 !important; stroke:#e3e5e8 !important; cursor:default; }
-.room-equip{ fill:#f4f5f6 !important; stroke:#e3e5e8 !important; cursor:default; opacity:.55; }
-.room-unused{ fill:var(--unused) !important; stroke:var(--unused-border) !important; cursor:pointer; }
-.room-unused:active{ fill:#d9dce0 !important; }
-.room-attraction{ fill:var(--accent-soft) !important; stroke:var(--accent) !important; cursor:pointer; }
-.room-attraction:active{ fill:#cfe0fd !important; }
+/* stroke-widthはSVG内部座標系(1300x800)基準。太くしてはっきり見えるようにしている */
+.room-corridor{ fill:var(--room-corridor-fill) !important; stroke:var(--room-corridor-stroke) !important; stroke-width:2.5px; cursor:default; }
+.room-equip{ stroke:#5a5a5a !important; stroke-width:2.5px; cursor:default; } /* fillは上書きしない＝埋め込み画像をそのまま表示 */
+.room-unused{ fill:var(--room-unused-fill) !important; stroke:var(--room-unused-stroke) !important; stroke-width:3px; cursor:pointer; }
+.room-unused:active{ fill:#fbdba3 !important; }
+.room-attraction{ fill:var(--room-attraction-fill) !important; stroke:var(--room-attraction-stroke) !important; stroke-width:3px; cursor:pointer; }
+.room-attraction:active{ fill:#bcdcf3 !important; }
 .room-flash{ animation:roomFlash .5s ease; }
 @keyframes roomFlash{
   0%{ filter:brightness(1.6); } 100%{ filter:brightness(1); }
+}
+.room-label{
+  font-family:var(--font);
+  font-weight:700;
+  fill:var(--ink) !important;
+  text-anchor:middle;
+  dominant-baseline:middle;
+  pointer-events:none;
+  paint-order:stroke;
+  stroke:#ffffff;
+  stroke-width:3px;
+  stroke-linejoin:round;
 }
 
 .zoom-hint{
@@ -205,7 +226,7 @@ header::-webkit-scrollbar{ display:none; }
 <body ontouchstart="">
 
 <header>
-  <div class="brand">PROJECT: <span>3IOHA7ARD</span> — MAP</div>
+  <div class="brand">PROJECT: <span>Z-INFECTION</span> — MAP</div>
   <a href="index.html" class="back-link">← トップに戻る</a>
 </header>
 
@@ -280,7 +301,7 @@ function classify(name){
    まだ紙のデータしか無いため、現時点ではすべて未入力プレースホルダー。
    ここにキー（部屋名／教室番号）を追加していけば、そのままカードに反映される。
    例:
-     "3-7": { tag: "アトラクション", title: "PROJECT: 3IOHA7ARD",
+     "3-7": { tag: "アトラクション", title: "PROJECT: Z-INFECTION",
                team: "3-7", desc: "ゾンビを撃って撃って撃ちまくれ。" },
    ========================================================================== */
 const ROOM_DATA = {
@@ -360,15 +381,24 @@ async function loadFloor(floorKey){
       if (kind === 'attraction' || kind === 'unused'){
         let bbox;
         try { bbox = el.getBBox(); } catch(e){ bbox = {x:0,y:0,width:0,height:0}; }
-        clickableEls.push({
-          el, name, kind,
-          cx: bbox.x + bbox.width/2,
-          cy: bbox.y + bbox.height/2
-        });
+        const cx = bbox.x + bbox.width/2;
+        const cy = bbox.y + bbox.height/2;
+        clickableEls.push({ el, name, kind, cx, cy });
         el.addEventListener('click', (ev) => {
           ev.stopPropagation();
           openRoom(name, kind, el);
         });
+        // 正方形または横長の部屋は、中央に部屋名を表示する
+        if (bbox.width >= bbox.height && bbox.width > 0){
+          const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+          label.setAttribute('x', cx);
+          label.setAttribute('y', cy);
+          label.setAttribute('class', 'room-label');
+          const fontSize = Math.max(11, Math.min(18, bbox.height * 0.28));
+          label.setAttribute('font-size', fontSize);
+          label.textContent = kind === 'unused' ? name.slice(1) : name;
+          el.parentNode.appendChild(label);
+        }
       }
     });
   });
