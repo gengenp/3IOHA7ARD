@@ -194,6 +194,8 @@ header::-webkit-scrollbar{ display:none; }
 }
 .card-team{ font-size:.78rem; color:var(--ink-dim); }
 .card-desc{ margin-top:.8rem; font-size:.87rem; line-height:1.7; color:var(--ink); }
+.card-divider{ border:none; border-top:1px solid var(--border); margin:1.1rem 0; }
+.card-block:not(:first-of-type){ margin-top:0; }
 
 /* ---- schedule modal ---- */
 .sched-tabs{ display:flex; gap:.5rem; margin-bottom:.9rem; }
@@ -298,24 +300,417 @@ function classify(name){
 
 /* ==========================================================================
    3. 部屋データ（団体名・タグ・紹介文）
-   まだ紙のデータしか無いため、現時点ではすべて未入力プレースホルダー。
-   ここにキー（部屋名／教室番号）を追加していけば、そのままカードに反映される。
-   例:
-     "3-7": { tag: "アトラクション", title: "PROJECT: Z-INFECTION",
-               team: "3-7", desc: "ゾンビを撃って撃って撃ちまくれ。" },
+   共有されたCSV（Book_10_Sheet1）から生成。1部屋に配列で複数団体を持たせられる。
+   ・同じ部屋を複数団体が使う場合 → 配列に複数エントリ
+   ・1団体が複数部屋を使う場合 → その団体のエントリを両方の部屋に登録
+   ・「体育館」表記は地図上の「体育館通路」に、「被服室」表記は地図上の「被覆室」に
+     名寄せしている（CSVとFigmaで表記ゆれがあったため）
    ========================================================================== */
 const ROOM_DATA = {
-  // ここに追記していく
+  "1-1": [
+    {
+      "tag": "アトラクション",
+      "title": "暴走遺伝子～ねぎがあなたを呼んでいる～",
+      "team": "1-1",
+      "desc": "サングラスをつけさせ迷路を進みながら「ネギ」を集める"
+    }
+  ],
+  "1-2": [
+    {
+      "tag": "アトラクション",
+      "title": "失踪の巨獣（ジュラシック）",
+      "team": "1-2",
+      "desc": "車に乗って恐竜の口にボールを入れる"
+    }
+  ],
+  "1-3": [
+    {
+      "tag": "アトラクション",
+      "title": "脱出コード１３",
+      "team": "1-3",
+      "desc": "手錠をつけて入場し、謎解きをしながらの脱出ゲーム"
+    }
+  ],
+  "1-4": [
+    {
+      "tag": "アトラクション",
+      "title": "金まみれ欲まみれ馬まみれ",
+      "team": "1-4",
+      "desc": "ポーカー、ブラックジャック・ルーレット・競馬"
+    }
+  ],
+  "1-5": [
+    {
+      "tag": "アトラクション",
+      "title": "ギャル☆縁日",
+      "team": "1-5",
+      "desc": "射的・モグラたたき・ギャル語・フォトスポット"
+    }
+  ],
+  "1-6": [
+    {
+      "tag": "演出・演奏",
+      "title": "千と千尋の神隠し",
+      "team": "1-6",
+      "desc": "「千と千尋の神隠し」を元にした演劇"
+    }
+  ],
+  "数学演習室": [
+    {
+      "tag": "演出・演奏",
+      "title": "フランス革命～パンが無ければケーキを食べればいいじゃない～",
+      "team": "1-7",
+      "desc": "「フランス革命」を題材にした演劇"
+    }
+  ],
+  "1-8": [
+    {
+      "tag": "アトラクション",
+      "title": "Unknown Mathematic Atackers",
+      "team": "1-8",
+      "desc": "トロッコに乗って惑星調査"
+    }
+  ],
+  "2-1": [
+    {
+      "tag": "アトラクション",
+      "title": "🏴‍☠️マニア！",
+      "team": "2-1",
+      "desc": "カートに乗りシューティング等のゲーム"
+    }
+  ],
+  "2-2": [
+    {
+      "tag": "演出・演奏",
+      "title": "星の王子さま",
+      "team": "2-2",
+      "desc": "「星の王子さま」を元にした演劇"
+    }
+  ],
+  "2-3": [
+    {
+      "tag": "開封提供",
+      "title": "今日アメリカに来ました。ー俺が松尾の王子様になるー",
+      "team": "2-3",
+      "desc": "ポップコーン・ドーナツ・クッキー・ドリンク販売"
+    }
+  ],
+  "2-4": [
+    {
+      "tag": "アトラクション",
+      "title": "Ghostbuster Ride",
+      "team": "2-4",
+      "desc": "シューティング・ライド・アトラクション"
+    }
+  ],
+  "食堂": [
+    {
+      "tag": "アトラクション",
+      "title": "ヤノ・ベンチャー～Can you surrie?～",
+      "team": "2-5",
+      "desc": "ジェットコースター"
+    }
+  ],
+  "調理室": [
+    {
+      "tag": "アトラクション",
+      "title": "ヤノ・ベンチャー～Can you surrie?～",
+      "team": "2-5",
+      "desc": "ジェットコースター"
+    },
+    {
+      "tag": "調理",
+      "title": "三代目理数家～親油性拉麺～",
+      "team": "3-8",
+      "desc": "油そば"
+    }
+  ],
+  "小体育館": [
+    {
+      "tag": "演出・演奏",
+      "title": "ラプンツェル",
+      "team": "2-6",
+      "desc": "グリム童話原作の演劇"
+    }
+  ],
+  "和室": [
+    {
+      "tag": "演出・演奏",
+      "title": "ラプンツェル",
+      "team": "2-6",
+      "desc": "グリム童話原作の演劇"
+    }
+  ],
+  "2-7": [
+    {
+      "tag": "アトラクション",
+      "title": "エリア27",
+      "team": "2-7",
+      "desc": "サングラスをつけて迷路を歩く"
+    }
+  ],
+  "2-8": [
+    {
+      "tag": "演出・演奏",
+      "title": "３匹の子豚",
+      "team": "2-8",
+      "desc": "「３匹の子豚」を改変した演劇"
+    }
+  ],
+  "英語科教室": [
+    {
+      "tag": "演出・演奏",
+      "title": "アラジンと魔法のランプ",
+      "team": "3-1",
+      "desc": "千夜一夜物語を元にした演劇"
+    }
+  ],
+  "3-2": [
+    {
+      "tag": "アトラクション",
+      "title": "ダンディージョーンズ",
+      "team": "3-2",
+      "desc": "映像に合わせてキャビンが動く"
+    }
+  ],
+  "3-3": [
+    {
+      "tag": "アトラクション",
+      "title": "🏴‍☠️・スターズ・ツアーズ",
+      "team": "3-3",
+      "desc": "「スターツアーズ」をモデルにしたアトラクション"
+    }
+  ],
+  "3-4": [
+    {
+      "tag": "アトラクション",
+      "title": "耳堕としの館",
+      "team": "3-4",
+      "desc": "怪談「耳なし芳一」をアレンジしたお化け屋敷"
+    }
+  ],
+  "3-8": [
+    {
+      "tag": "アトラクション",
+      "title": "血痕死期～怨念がおんねん～",
+      "team": "3-5",
+      "desc": "結婚式をベースにしたお化け屋敷"
+    }
+  ],
+  "3-1": [
+    {
+      "tag": "アトラクション",
+      "title": "PARADIESE～本日の主役はあなたです。～",
+      "team": "3-6",
+      "desc": "サーカスを舞台にしたお化け屋敷"
+    }
+  ],
+  "3-7": [
+    {
+      "tag": "アトラクション",
+      "title": "3IOHA7ARD",
+      "team": "3-7",
+      "desc": "ゾンビを倒すシューティングゲーム"
+    }
+  ],
+  "被覆室": [
+    {
+      "tag": "調理",
+      "title": "三代目理数家～親油性拉麺～",
+      "team": "3-8",
+      "desc": "油そば"
+    }
+  ],
+  "体育館通路": [
+    {
+      "tag": "演出・演奏",
+      "title": "KDC文化祭ライブ",
+      "team": "ダンス部",
+      "desc": "所要時間100分程度"
+    },
+    {
+      "tag": "演出・演奏",
+      "title": "百歌繚乱",
+      "team": "合唱部",
+      "desc": "旅立ちの時・アイネクライネ・はじまり"
+    },
+    {
+      "tag": "演出・演奏",
+      "title": "書道パフォーマンス",
+      "team": "書道部",
+      "desc": "書道パフォーマンスと作品展示"
+    },
+    {
+      "tag": "演出・演奏",
+      "title": "KBフェスティバル！！",
+      "team": "吹奏楽部",
+      "desc": "30分程度の演奏"
+    },
+    {
+      "tag": "演出・演奏",
+      "title": "NEGI ROCK FESTIVAL2026",
+      "team": "軽音楽部",
+      "desc": "ライブ（4時間～4時間30分）"
+    }
+  ],
+  "2-6": [
+    {
+      "tag": "演出・演奏",
+      "title": "死の劇場",
+      "team": "演劇部",
+      "desc": "オリジナル脚本"
+    }
+  ],
+  "第一化学室": [
+    {
+      "tag": "研究展示",
+      "title": "青すぎて滅！",
+      "team": "化学研究部",
+      "desc": "化学反応を利用したしおり作り体験"
+    }
+  ],
+  "第二化学室": [
+    {
+      "tag": "研究展示",
+      "title": "青すぎて滅！",
+      "team": "化学研究部",
+      "desc": "化学反応を利用したしおり作り体験"
+    }
+  ],
+  "作法室": [
+    {
+      "tag": "開封提供",
+      "title": "長月茶会",
+      "team": "茶道部",
+      "desc": "お点前披露・お茶お菓子提供"
+    }
+  ],
+  "書道室": [
+    {
+      "tag": "演出・演奏",
+      "title": "書道パフォーマンス",
+      "team": "書道部",
+      "desc": "書道パフォーマンスと作品展示"
+    }
+  ],
+  "音楽室": [
+    {
+      "tag": "演出・演奏",
+      "title": "KBフェスティバル！！",
+      "team": "吹奏楽部",
+      "desc": "30分程度の演奏"
+    }
+  ],
+  "第一物理室": [
+    {
+      "tag": "研究展示",
+      "title": "😀Star Dome～君がいるから美しい星空～",
+      "team": "天文部",
+      "desc": "自作プラネタリウム・展示・フォトスポット"
+    }
+  ],
+  "美術室": [
+    {
+      "tag": "研究展示",
+      "title": "😀美術館",
+      "team": "美術部",
+      "desc": "自作ポストカード・缶バッジ販売、作品展示"
+    }
+  ],
+  "2-5": [
+    {
+      "tag": "研究展示",
+      "title": "柏裂写真展！！",
+      "team": "写真部",
+      "desc": "写真展示"
+    },
+    {
+      "tag": "研究展示",
+      "title": "はんどめいど工房",
+      "team": "ハンドメイド同好会",
+      "desc": "作品展示・販売"
+    }
+  ],
+  "第一生物室": [
+    {
+      "tag": "アトラクション",
+      "title": "🏁 GAME SHOW",
+      "team": "電子工学部",
+      "desc": "自作ゲーム展示・体験"
+    }
+  ],
+  "3-5": [
+    {
+      "tag": "研究展示",
+      "title": "Comic Atelier of 🏁",
+      "team": "漫画部",
+      "desc": "部誌展示・配布"
+    },
+    {
+      "tag": "研究展示",
+      "title": "ブ～ン芸部",
+      "team": "文芸部",
+      "desc": "部誌展示・配布"
+    },
+    {
+      "tag": "研究展示",
+      "title": "あつまれ！本好きの森",
+      "team": "図書委員会",
+      "desc": "古本市、和綴じ体験"
+    }
+  ],
+  "3-6": [
+    {
+      "tag": "アトラクション",
+      "title": "ネギリーグ",
+      "team": "クイズ部",
+      "desc": "早押しクイズ・ボードクイズ"
+    },
+    {
+      "tag": "演出・演奏",
+      "title": "😀シネマ",
+      "team": "動画制作同好会",
+      "desc": "オリジナル映像"
+    }
+  ],
+  "第二生物室": [
+    {
+      "tag": "研究展示",
+      "title": "生物パーク２０２６",
+      "team": "生物部",
+      "desc": "顕微鏡・標本展示、スタンプラリー、魚すくい、クイズ、生物展示"
+    }
+  ],
+  "1-7": [
+    {
+      "tag": "アトラクション",
+      "title": "😀のパーフェクト数学教室",
+      "team": "数学部",
+      "desc": "制限時間内に問題解答を競う"
+    }
+  ],
+  "第二物理室": [
+    {
+      "tag": "未開封提供",
+      "title": "パン　宇宙《🏴‍☠️》を照らすよ～😀秋のパン祭り２０２６～",
+      "team": "PTA",
+      "desc": "パン販売"
+    }
+  ],
+  "視聴覚室": [
+    {
+      "tag": "演出・演奏",
+      "title": "問を拓く、未来の教室。🏁 Media Labo　ー柏葉探究セッション公開収録ー",
+      "team": "県立柏高校同窓会",
+      "desc": "柏葉探究セミナー関係者による予告トーク（公開収録）。取り組み紹介。同窓会紹介等。"
+    }
+  ]
 };
 
-function getRoomInfo(name){
-  const d = ROOM_DATA[name] || {};
-  return {
-    tag:   d.tag   || '未入力',
-    title: d.title || name,
-    team:  d.team  || name,
-    desc:  d.desc  || '紹介文は未入力です。'
-  };
+function getRoomInfoList(name){
+  const list = ROOM_DATA[name];
+  if (list && list.length > 0) return list;
+  return [{ tag: '未入力', title: name, team: name, desc: '紹介文は未入力です。' }];
 }
 
 /* ==========================================================================
@@ -412,7 +807,7 @@ async function loadFloor(floorKey){
       }
 
       // 正方形または横長の部屋は、中央に部屋名を表示する（例外指定の部屋は形に関わらず表示）
-      const shouldLabel = FORCE_LABEL_NAMES.has(name) || (bbox.width >= bbox.height && bbox.width > 0);
+      const shouldLabel = FORCE_LABEL_NAMES.has(name) || ((kind === 'attraction' || kind === 'unused') && bbox.width >= bbox.height && bbox.width > 0);
       if (shouldLabel && bbox.width > 0){
         const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
         label.setAttribute('x', bbox.x + bbox.width/2);
@@ -473,13 +868,18 @@ function openRoom(name, kind, el){
       <div class="simple-note">このスペースは今回のアトラクションでは使用していません。</div>
     `;
   } else {
-    const info = getRoomInfo(name);
+    const infoList = getRoomInfoList(name);
+    const cardsHTML = infoList.map(info => `
+      <div class="card-block">
+        <span class="card-tag">${escapeHTML(info.tag)}</span>
+        <div class="card-title">${escapeHTML(info.title)}</div>
+        <div class="card-team">団体名：${escapeHTML(info.team)}</div>
+        <p class="card-desc">${escapeHTML(info.desc)}</p>
+      </div>
+    `).join('<hr class="card-divider">');
     sheet.innerHTML = `
       <button class="sheet-close" data-close="roomOverlay">閉じる ✕</button>
-      <span class="card-tag">${escapeHTML(info.tag)}</span>
-      <div class="card-title">${escapeHTML(info.title)}</div>
-      <div class="card-team">団体名：${escapeHTML(info.team)}</div>
-      <p class="card-desc">${escapeHTML(info.desc)}</p>
+      ${cardsHTML}
     `;
   }
   overlay.classList.add('show');
