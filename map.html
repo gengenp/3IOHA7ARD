@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
 <meta name="robots" content="noindex">
-<title>構内マップ | PROJECT: 3IOHA7ARD</title>
+<title>構内マップ | PROJECT: Z-INFECTION</title>
 <style>
 /* ==========================================================================
    構内マップ（フルページ版）— ホワイトベースのシンプルなUI
@@ -228,7 +228,7 @@ header::-webkit-scrollbar{ display:none; }
 <body ontouchstart="">
 
 <header>
-  <div class="brand">PROJECT: <span>3IOHA7ARD</span> — MAP</div>
+  <div class="brand">PROJECT: <span>Z-INFECTION</span> — MAP</div>
   <a href="index.html" class="back-link">← トップに戻る</a>
 </header>
 
@@ -303,9 +303,13 @@ function classify(name){
    共有されたCSV（Book_10_Sheet1）から生成。1部屋に配列で複数団体を持たせられる。
    ・同じ部屋を複数団体が使う場合 → 配列に複数エントリ
    ・1団体が複数部屋を使う場合 → その団体のエントリを両方の部屋に登録
-   ・「体育館」表記は地図上の「体育館通路」に、「被服室」表記は地図上の「被覆室」に
-     名寄せしている（CSVとFigmaで表記ゆれがあったため）
+   ・地図（SVG）側のidが「被覆室」という誤字だったため、NAME_NORMALIZEで
+     正しい表記「被服室」に補正している。ROOM_DATAのキーは補正後の「被服室」を使う。
    ========================================================================== */
+const NAME_NORMALIZE = {
+  '被覆室': '被服室',
+};
+
 const ROOM_DATA = {
   "1-1": [
     {
@@ -374,7 +378,7 @@ const ROOM_DATA = {
   "2-1": [
     {
       "tag": "アトラクション",
-      "title": "ケンカシマニア！",
+      "title": "🏴‍☠️マニア！",
       "team": "2-1",
       "desc": "カートに乗りシューティング等のゲーム"
     }
@@ -476,7 +480,7 @@ const ROOM_DATA = {
   "3-3": [
     {
       "tag": "アトラクション",
-      "title": "ケンカシ・スターズ・ツアーズ",
+      "title": "🏴‍☠️・スターズ・ツアーズ",
       "team": "3-3",
       "desc": "「スターツアーズ」をモデルにしたアトラクション"
     }
@@ -513,7 +517,7 @@ const ROOM_DATA = {
       "desc": "ゾンビを倒すシューティングゲーム"
     }
   ],
-  "被覆室": [
+  "被服室": [
     {
       "tag": "調理",
       "title": "三代目理数家～親油性拉麺～",
@@ -604,7 +608,7 @@ const ROOM_DATA = {
   "第一物理室": [
     {
       "tag": "研究展示",
-      "title": "県柏Star Dome～君がいるから美しい星空～",
+      "title": "😀Star Dome～君がいるから美しい星空～",
       "team": "天文部",
       "desc": "自作プラネタリウム・展示・フォトスポット"
     }
@@ -612,7 +616,7 @@ const ROOM_DATA = {
   "美術室": [
     {
       "tag": "研究展示",
-      "title": "県柏美術館",
+      "title": "😀美術館",
       "team": "美術部",
       "desc": "自作ポストカード・缶バッジ販売、作品展示"
     }
@@ -634,7 +638,7 @@ const ROOM_DATA = {
   "第一生物室": [
     {
       "tag": "アトラクション",
-      "title": "KENKASHI GAME SHOW",
+      "title": "🏁 GAME SHOW",
       "team": "電子工学部",
       "desc": "自作ゲーム展示・体験"
     }
@@ -642,7 +646,7 @@ const ROOM_DATA = {
   "3-5": [
     {
       "tag": "研究展示",
-      "title": "Comic Atelier of Kenkashi",
+      "title": "Comic Atelier of 🏁",
       "team": "漫画部",
       "desc": "部誌展示・配布"
     },
@@ -668,7 +672,7 @@ const ROOM_DATA = {
     },
     {
       "tag": "演出・演奏",
-      "title": "県柏シネマ",
+      "title": "😀シネマ",
       "team": "動画制作同好会",
       "desc": "オリジナル映像"
     }
@@ -684,7 +688,7 @@ const ROOM_DATA = {
   "1-7": [
     {
       "tag": "アトラクション",
-      "title": "県柏のパーフェクト数学教室",
+      "title": "😀のパーフェクト数学教室",
       "team": "数学部",
       "desc": "制限時間内に問題解答を競う"
     }
@@ -692,7 +696,7 @@ const ROOM_DATA = {
   "第二物理室": [
     {
       "tag": "未開封提供",
-      "title": "パン　宇宙《ケンカシ》を照らすよ～県柏秋のパン祭り２０２６～",
+      "title": "パン　宇宙《🏴‍☠️》を照らすよ～😀秋のパン祭り２０２６～",
       "team": "PTA",
       "desc": "パン販売"
     }
@@ -700,7 +704,7 @@ const ROOM_DATA = {
   "視聴覚室": [
     {
       "tag": "演出・演奏",
-      "title": "問を拓く、未来の教室。KENKASHI Media Labo　ー柏葉探究セッション公開収録ー",
+      "title": "問を拓く、未来の教室。🏁 Media Labo　ー柏葉探究セッション公開収録ー",
       "team": "県立柏高校同窓会",
       "desc": "柏葉探究セミナー関係者による予告トーク（公開収録）。取り組み紹介。同窓会紹介等。"
     }
@@ -780,7 +784,8 @@ async function loadFloor(floorKey){
     svgClone.querySelectorAll(tag + '[id]').forEach(el => {
       const rawId = el.getAttribute('id');
       if (/pattern|image|clip|path-/.test(rawId)) return;
-      const name = decodeMojibakeId(rawId);
+      let name = decodeMojibakeId(rawId);
+      name = NAME_NORMALIZE[name] || name;
       if (tag === 'g' && FLOOR_WRAPPER_NAMES.has(name)) return; // フロア全体のラッパーは対象外
 
       const kind = FORCE_CORRIDOR_NAMES.has(name) ? 'corridor' : classify(name);
@@ -832,12 +837,9 @@ document.getElementById('mapStage').addEventListener('click', (ev) => {
   const stage = document.getElementById('mapStage');
   const svg = stage.querySelector('svg');
   if (!svg || clickableEls.length === 0) return;
-  const pt = svg.createSVGPoint();
-  pt.x = ev.offsetX; pt.y = ev.offsetY;
   // stageは transform されているため、逆行列でSVG内部座標に変換
   const ctm = svg.getScreenCTM();
   if (!ctm) return;
-  const rect = stage.getBoundingClientRect();
   const svgPt = svg.createSVGPoint();
   svgPt.x = ev.clientX; svgPt.y = ev.clientY;
   const local = svgPt.matrixTransform(ctm.inverse());
@@ -847,7 +849,10 @@ document.getElementById('mapStage').addEventListener('click', (ev) => {
     if (d < bestDist){ bestDist = d; best = c; }
   });
   // 極端に離れていたら反応しない（画面外タップなどのノイズ防止）
-  if (best && bestDist < (300*300)){
+  // 最小の部屋（49x49程度）の半径よりやや広い程度に絞り、
+  // 「タップがちょっとズレた」だけを救済し、明らかに離れた場所は反応しないようにする。
+  const SNAP_RADIUS = 55;
+  if (best && bestDist < (SNAP_RADIUS * SNAP_RADIUS)){
     best.el.classList.add('room-flash');
     setTimeout(() => best.el.classList.remove('room-flash'), 500);
     openRoom(best.name, best.kind, best.el);
@@ -951,16 +956,28 @@ const pointers = new Map();
 let pinchStartDist = 0, pinchStartScale = 1;
 let panStart = null;
 
+// 指の本数が変わるたび（押した時・離した時どちらも）に、
+// 現在の指の位置・現在のpanX/panYを基準としてpanStartを作り直す。
+// これをやらないと、ピンチ後に指を1本離した瞬間、ピンチ開始前の古い基準点が
+// 使われてしまい、パン位置が一気に飛ぶ不具合が起きる。
+function refreshPanStart(){
+  if (pointers.size === 1){
+    const [pt] = pointers.values();
+    panStart = { x: pt.x, y: pt.y, panX, panY };
+  } else {
+    panStart = null;
+  }
+}
+
 viewport.addEventListener('pointerdown', (e) => {
   viewport.setPointerCapture(e.pointerId);
   pointers.set(e.pointerId, {x:e.clientX, y:e.clientY});
-  if (pointers.size === 1){
-    panStart = {x:e.clientX, y:e.clientY, panX, panY};
-  } else if (pointers.size === 2){
+  if (pointers.size === 2){
     const pts = [...pointers.values()];
     pinchStartDist = Math.hypot(pts[0].x-pts[1].x, pts[0].y-pts[1].y);
     pinchStartScale = scale;
   }
+  refreshPanStart();
 });
 
 viewport.addEventListener('pointermove', (e) => {
@@ -993,7 +1010,7 @@ viewport.addEventListener('pointermove', (e) => {
 function endPointer(e){
   pointers.delete(e.pointerId);
   if (pointers.size < 2) pinchStartDist = 0;
-  if (pointers.size === 0) panStart = null;
+  refreshPanStart();
 }
 viewport.addEventListener('pointerup', endPointer);
 viewport.addEventListener('pointercancel', endPointer);
