@@ -114,6 +114,8 @@ header::-webkit-scrollbar{ display:none; }
 .room-unused:active{ fill:#fbdba3 !important; }
 .room-attraction{ fill:var(--room-attraction-fill) !important; stroke:var(--room-attraction-stroke) !important; stroke-width:3px; cursor:pointer; }
 .room-attraction:active{ fill:#bcdcf3 !important; }
+/* タップした部屋は、ポップアップを閉じるまで黄色でハイライトする */
+.room-selected{ fill:#fff3b0 !important; stroke:#c9a300 !important; stroke-width:3.5px !important; }
 .room-flash{ animation:roomFlash .5s ease; }
 @keyframes roomFlash{
   0%{ filter:brightness(1.6); } 100%{ filter:brightness(1); }
@@ -181,6 +183,7 @@ header::-webkit-scrollbar{ display:none; }
   border-left:3px solid var(--border); padding-left:.8rem;
 }
 .simple-note{ margin-top:.6rem; font-size:.78rem; color:var(--ink-dim); }
+.room-location{ margin-bottom:1.1rem; }
 
 /* card popup (attraction rooms) */
 .card-tag{
@@ -378,7 +381,7 @@ const ROOM_DATA = {
   "2-1": [
     {
       "tag": "アトラクション",
-      "title": "ケンカシマニア！",
+      "title": "🏴‍☠️マニア！",
       "team": "2-1",
       "desc": "カートに乗りシューティング等のゲーム"
     }
@@ -480,7 +483,7 @@ const ROOM_DATA = {
   "3-3": [
     {
       "tag": "アトラクション",
-      "title": "ケンカシ・スターズ・ツアーズ",
+      "title": "🏴‍☠️・スターズ・ツアーズ",
       "team": "3-3",
       "desc": "「スターツアーズ」をモデルにしたアトラクション"
     }
@@ -608,7 +611,7 @@ const ROOM_DATA = {
   "第一物理室": [
     {
       "tag": "研究展示",
-      "title": "県柏Star Dome～君がいるから美しい星空～",
+      "title": "😀Star Dome～君がいるから美しい星空～",
       "team": "天文部",
       "desc": "自作プラネタリウム・展示・フォトスポット"
     }
@@ -616,7 +619,7 @@ const ROOM_DATA = {
   "美術室": [
     {
       "tag": "研究展示",
-      "title": "県柏美術館",
+      "title": "😀美術館",
       "team": "美術部",
       "desc": "自作ポストカード・缶バッジ販売、作品展示"
     }
@@ -638,7 +641,7 @@ const ROOM_DATA = {
   "第一生物室": [
     {
       "tag": "アトラクション",
-      "title": "KENKASHI GAME SHOW",
+      "title": "🏁 GAME SHOW",
       "team": "電子工学部",
       "desc": "自作ゲーム展示・体験"
     }
@@ -646,7 +649,7 @@ const ROOM_DATA = {
   "3-5": [
     {
       "tag": "研究展示",
-      "title": "Comic Atelier of Kenkashi",
+      "title": "Comic Atelier of 🏁",
       "team": "漫画部",
       "desc": "部誌展示・配布"
     },
@@ -672,7 +675,7 @@ const ROOM_DATA = {
     },
     {
       "tag": "演出・演奏",
-      "title": "県柏シネマ",
+      "title": "😀シネマ",
       "team": "動画制作同好会",
       "desc": "オリジナル映像"
     }
@@ -688,7 +691,7 @@ const ROOM_DATA = {
   "1-7": [
     {
       "tag": "アトラクション",
-      "title": "県柏のパーフェクト数学教室",
+      "title": "😀のパーフェクト数学教室",
       "team": "数学部",
       "desc": "制限時間内に問題解答を競う"
     }
@@ -696,7 +699,7 @@ const ROOM_DATA = {
   "第二物理室": [
     {
       "tag": "未開封提供",
-      "title": "パン　宇宙《ケンカシ》を照らすよ～県柏秋のパン祭り２０２６～",
+      "title": "パン　宇宙《🏴‍☠️》を照らすよ～😀秋のパン祭り２０２６～",
       "team": "PTA",
       "desc": "パン販売"
     }
@@ -704,14 +707,13 @@ const ROOM_DATA = {
   "視聴覚室": [
     {
       "tag": "演出・演奏",
-      "title": "問を拓く、未来の教室。KENKASHI Media Labo　ー柏葉探究セッション公開収録ー",
+      "title": "問を拓く、未来の教室。🏁 Media Labo　ー柏葉探究セッション公開収録ー",
       "team": "県立柏高校同窓会",
       "desc": "柏葉探究セミナー関係者による予告トーク（公開収録）。取り組み紹介。同窓会紹介等。"
     }
   ]
 };
 
-   
 function getRoomInfoList(name){
   const list = ROOM_DATA[name];
   if (list && list.length > 0) return list;
@@ -863,14 +865,41 @@ document.getElementById('mapStage').addEventListener('click', (ev) => {
 /* ==========================================================================
    7. ポップアップ描画
    ========================================================================== */
+let selectedEl = null; // 現在ハイライト中（黄色）の部屋要素
+
+function formatLocationName(name){
+  if (name === '体育館通路') return '体育館';
+  if (/^\d+-\d+$/.test(name)) return name + '教室'; // 例: "1-1" → "1-1教室"
+  return name;
+}
+
+function highlightRoom(el){
+  clearRoomHighlight();
+  selectedEl = el;
+  el.classList.add('room-selected');
+  if (el.tagName === 'g'){
+    el.querySelectorAll('rect,path,polygon,circle,ellipse').forEach(c => c.classList.add('room-selected'));
+  }
+}
+
+function clearRoomHighlight(){
+  if (!selectedEl) return;
+  selectedEl.classList.remove('room-selected');
+  if (selectedEl.tagName === 'g'){
+    selectedEl.querySelectorAll('rect,path,polygon,circle,ellipse').forEach(c => c.classList.remove('room-selected'));
+  }
+  selectedEl = null;
+}
+
 function openRoom(name, kind, el){
+  highlightRoom(el);
   const overlay = document.getElementById('roomOverlay');
   const sheet = document.getElementById('roomSheet');
   if (kind === 'unused'){
     const displayName = name.slice(1); // 先頭の 'c' を除いた部屋名
     sheet.innerHTML = `
       <button class="sheet-close" data-close="roomOverlay">閉じる ✕</button>
-      <div class="simple-name">${escapeHTML(displayName)}</div>
+      <div class="simple-name">${escapeHTML(formatLocationName(displayName))}</div>
       <div class="simple-note">このスペースは今回のアトラクションでは使用していません。</div>
     `;
   } else {
@@ -885,6 +914,7 @@ function openRoom(name, kind, el){
     `).join('<hr class="card-divider">');
     sheet.innerHTML = `
       <button class="sheet-close" data-close="roomOverlay">閉じる ✕</button>
+      <div class="simple-name room-location">${escapeHTML(formatLocationName(name))}</div>
       ${cardsHTML}
     `;
   }
@@ -898,14 +928,22 @@ function escapeHTML(str){
 // data-close属性を持つボタンは、あとから innerHTML で動的に追加されるものも多い
 // （openRoom()内で毎回生成される「閉じる」ボタンなど）ため、
 // ページ読み込み時に一度だけbindするのではなく、documentに対するイベント委任にする。
+// 部屋ポップアップ（roomOverlay）を閉じるときは、ハイライトも一緒に解除する。
 document.addEventListener('click', (e) => {
   const btn = e.target.closest('[data-close]');
   if (btn){
-    document.getElementById(btn.dataset.close).classList.remove('show');
+    const targetId = btn.dataset.close;
+    document.getElementById(targetId).classList.remove('show');
+    if (targetId === 'roomOverlay') clearRoomHighlight();
   }
 });
 document.querySelectorAll('.overlay').forEach(ov => {
-  ov.addEventListener('click', (e) => { if (e.target === ov) ov.classList.remove('show'); });
+  ov.addEventListener('click', (e) => {
+    if (e.target === ov){
+      ov.classList.remove('show');
+      if (ov.id === 'roomOverlay') clearRoomHighlight();
+    }
+  });
 });
 
 /* ==========================================================================
