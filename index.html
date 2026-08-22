@@ -1062,7 +1062,7 @@ async function loadRanking(){
     if(rows.length === 0) throw new Error("シートにデータがありません");
     renderRanking(rows);
   }catch(err){
-    console.warn("[Z-INFECTION] ランキング取得エラー:", err.message);
+    console.warn("[3IOHA7ARD] ランキング取得エラー:", err.message);
     // デモ用のサンプルデータで表示（未設定・取得失敗時のプレビュー用）
     renderRanking([
       { name: "ゾンビハンターK", score: "12500" },
@@ -1107,7 +1107,7 @@ async function loadLiveChallenger(){
     stageEl.textContent = "STAGE: " + (stage || "--");
     timeEl.textContent = time || "--:--:--";
   }catch(err){
-    console.warn("[Z-INFECTION] LIVEチャレンジャー取得エラー:", err.message);
+    console.warn("[3IOHA7ARD] LIVEチャレンジャー取得エラー:", err.message);
     // デモ用サンプル値（未設定・取得失敗時のプレビュー用）
     nameEl.textContent = "ゾンビハンターK";
     scoreEl.innerHTML = `3,200<span class="unit">pt</span>`;
@@ -1137,7 +1137,7 @@ async function loadWaitingStatus(){
     const latest = rows[rows.length - 1];
     applyWaitingStatus(Number(latest.waiting_time) || 0, latest.status || "受付中");
   }catch(err){
-    console.warn("[Z-INFECTION] 待ち時間取得エラー:", err.message);
+    console.warn("[3IOHA7ARD] 待ち時間取得エラー:", err.message);
     // デモ用サンプル値
     applyWaitingStatus(45, "配布中");
   }
@@ -1239,7 +1239,7 @@ async function loadMiniMap(){
       });
     });
   }catch(err){
-    console.warn('[Z-INFECTION] ミニマップ取得エラー:', err.message);
+    console.warn('[3IOHA7ARD] ミニマップ取得エラー:', err.message);
     stage.innerHTML = '<div class="mini-map-loading">マップを読み込めませんでした。<br>「全フロア・全アトラクションのマップを見る」からご確認ください。</div>';
   }
 }
