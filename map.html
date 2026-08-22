@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
 <meta name="robots" content="noindex">
-<title>構内マップ | PROJECT: 3IOHA7ARD</title>
+<title>構内マップ | PROJECT: Z-INFECTION</title>
 <style>
 /* ==========================================================================
    構内マップ（フルページ版）— ホワイトベースのシンプルなUI
@@ -133,12 +133,15 @@ header::-webkit-scrollbar{ display:none; }
   stroke-linejoin:round;
 }
 
-.zoom-hint{
-  position:absolute; bottom:.8rem; left:50%; transform:translateX(-50%);
-  font-size:.68rem; color:var(--ink-dim);
-  background:rgba(255,255,255,.9); padding:.35rem .8rem; border:1px solid var(--border); border-radius:20px;
+.zoom-hint-center{
+  position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
+  font-size:clamp(1.1rem, 4vw, 1.6rem); font-weight:700; line-height:1.7;
+  color:var(--ink-dim); text-align:center;
+  opacity:.55;
   pointer-events:none; z-index:5;
+  transition:opacity .4s ease;
 }
+.zoom-hint-center.hidden{ opacity:0; }
 
 /* ---- schedule button ---- */
 .schedule-btn{
@@ -244,7 +247,7 @@ header::-webkit-scrollbar{ display:none; }
 
 <div class="map-viewport" id="mapViewport">
   <div class="map-stage" id="mapStage"></div>
-  <div class="zoom-hint">指1本でスワイプ / 指2本でピンチズーム</div>
+  <div class="zoom-hint-center" id="zoomHintCenter">指1本でスワイプ<br>指2本でピンチズーム</div>
 </div>
 
 <button class="schedule-btn" id="scheduleOpenBtn">🕒 ステージ・体育館<br>スケジュール</button>
@@ -381,7 +384,7 @@ const ROOM_DATA = {
   "2-1": [
     {
       "tag": "アトラクション",
-      "title": "ケンカシマニア！",
+      "title": "🏴‍☠️マニア！",
       "team": "2-1",
       "desc": "カートに乗りシューティング等のゲーム"
     }
@@ -483,7 +486,7 @@ const ROOM_DATA = {
   "3-3": [
     {
       "tag": "アトラクション",
-      "title": "ケンカシ・スターズ・ツアーズ",
+      "title": "🏴‍☠️・スターズ・ツアーズ",
       "team": "3-3",
       "desc": "「スターツアーズ」をモデルにしたアトラクション"
     }
@@ -611,7 +614,7 @@ const ROOM_DATA = {
   "第一物理室": [
     {
       "tag": "研究展示",
-      "title": "県柏Star Dome～君がいるから美しい星空～",
+      "title": "😀Star Dome～君がいるから美しい星空～",
       "team": "天文部",
       "desc": "自作プラネタリウム・展示・フォトスポット"
     }
@@ -619,7 +622,7 @@ const ROOM_DATA = {
   "美術室": [
     {
       "tag": "研究展示",
-      "title": "県柏美術館",
+      "title": "😀美術館",
       "team": "美術部",
       "desc": "自作ポストカード・缶バッジ販売、作品展示"
     }
@@ -641,7 +644,7 @@ const ROOM_DATA = {
   "第一生物室": [
     {
       "tag": "アトラクション",
-      "title": "KENKASHI GAME SHOW",
+      "title": "🏁 GAME SHOW",
       "team": "電子工学部",
       "desc": "自作ゲーム展示・体験"
     }
@@ -649,7 +652,7 @@ const ROOM_DATA = {
   "3-5": [
     {
       "tag": "研究展示",
-      "title": "Comic Atelier of Kenkashi",
+      "title": "Comic Atelier of 🏁",
       "team": "漫画部",
       "desc": "部誌展示・配布"
     },
@@ -675,7 +678,7 @@ const ROOM_DATA = {
     },
     {
       "tag": "演出・演奏",
-      "title": "県柏シネマ",
+      "title": "😀シネマ",
       "team": "動画制作同好会",
       "desc": "オリジナル映像"
     }
@@ -691,7 +694,7 @@ const ROOM_DATA = {
   "1-7": [
     {
       "tag": "アトラクション",
-      "title": "県柏のパーフェクト数学教室",
+      "title": "😀のパーフェクト数学教室",
       "team": "数学部",
       "desc": "制限時間内に問題解答を競う"
     }
@@ -699,7 +702,7 @@ const ROOM_DATA = {
   "第二物理室": [
     {
       "tag": "未開封提供",
-      "title": "パン　宇宙《ケンカシ》を照らすよ～県柏秋のパン祭り２０２６～",
+      "title": "パン　宇宙《🏴‍☠️》を照らすよ～😀秋のパン祭り２０２６～",
       "team": "PTA",
       "desc": "パン販売"
     }
@@ -707,7 +710,7 @@ const ROOM_DATA = {
   "視聴覚室": [
     {
       "tag": "演出・演奏",
-      "title": "問を拓く、未来の教室。KENKASHI Media Labo　ー柏葉探究セッション公開収録ー",
+      "title": "問を拓く、未来の教室。🏁 Media Labo　ー柏葉探究セッション公開収録ー",
       "team": "県立柏高校同窓会",
       "desc": "柏葉探究セミナー関係者による予告トーク（公開収録）。取り組み紹介。同窓会紹介等。"
     }
@@ -963,6 +966,12 @@ const stageEl = document.getElementById('mapStage');
 let scale = 1, panX = 0, panY = 0;
 let minScale = 1, maxScale = 4;
 const NATIVE_W = 1300, NATIVE_H = 800;
+
+// 中央の操作ヒントは、画面に触れた瞬間に一度だけ消える（再読み込みするまで再表示しない）
+const zoomHintCenter = document.getElementById('zoomHintCenter');
+viewport.addEventListener('pointerdown', () => {
+  zoomHintCenter.classList.add('hidden');
+}, { once:true });
 
 function resetView(){
   const vw = viewport.clientWidth, vh = viewport.clientHeight;
